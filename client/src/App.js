@@ -1,50 +1,67 @@
-// client/src/App.js
 import ListHeader from './components/ListHeader'
 import ListItem from './components/ListItem'
 import Auth from './components/Auth'
 import { useEffect, useMemo, useState } from 'react'
+import { useCookies } from 'react-cookie'
+
+const TOPBAR_H = 64 // visual height of the fixed header
 
 const App = () => {
-  const [userEmail, setUserEmail] = useState(null)   // comes from /me
+  // session state
+  const [userEmail, setUserEmail] = useState(null)   // comes from /me cookie session
   const [checkingSession, setCheckingSession] = useState(true)
+  const [, , removeCookie] = useCookies(null)
 
+  // tasks state
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(false)
+
+  // UI state
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')        // all | active | completed
   const [sortKey, setSortKey] = useState('date')     // date | priority | progress
 
-  // verify session and get current user
+  // fetch current session from backend
   useEffect(() => {
-    const checkAuth = async () => {
+    const loadSession = async () => {
       try {
         const res = await fetch(`${process.env.REACT_APP_SERVERURL}/me`, {
           credentials: 'include',
         })
         if (res.ok) {
-          const data = await res.json()
-          setUserEmail(data.email || null)
+          const json = await res.json()
+          setUserEmail(json?.email || null)
         } else {
           setUserEmail(null)
         }
-      } catch (e) {
-        console.error(e)
+      } catch (err) {
+        console.error(err)
         setUserEmail(null)
       } finally {
         setCheckingSession(false)
       }
     }
-    checkAuth()
+    loadSession()
   }, [])
 
+  // when session state changes, toggle a class on <body> so content sticks to the top (not vertically centered)
+  useEffect(() => {
+    const cls = 'with-topbar'
+    if (userEmail) document.body.classList.add(cls)
+    else document.body.classList.remove(cls)
+    return () => document.body.classList.remove(cls)
+  }, [userEmail])
+
+  // fetch tasks for the user
   const getData = async () => {
     if (!userEmail) return
+    setLoading(true)
     try {
-      setLoading(true)
-      const response = await fetch(
-        `${process.env.REACT_APP_SERVERURL}/todos/${userEmail}`,
-        { credentials: 'include' } // send httpOnly auth cookie
-      )
+      const response = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${encodeURIComponent(userEmail)}`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('Failed to load tasks')
       const json = await response.json()
       setTasks(Array.isArray(json) ? json : [])
     } catch (err) {
@@ -55,11 +72,30 @@ const App = () => {
     }
   }
 
+  // load tasks after session resolves
   useEffect(() => {
     if (userEmail) getData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userEmail])
 
+  // sign out moved to top bar
+  const signOut = async () => {
+    try {
+      await fetch(`${process.env.REACT_APP_SERVERURL}/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      // legacy cookies cleanup (kept for compatibility)
+      removeCookie('Email')
+      removeCookie('AuthToken')
+      window.location.reload()
+    }
+  }
+
+  // apply search, filter and sort
   const processedTasks = useMemo(() => {
     let arr = Array.isArray(tasks) ? [...tasks] : []
 
@@ -78,25 +114,20 @@ const App = () => {
     return arr
   }, [tasks, query, filter, sortKey])
 
-  const btnStyle = (active) => ({
-    padding: '6px 10px',
-    borderRadius: 12,
-    border: '1px solid #e6e8ec',
-    backgroundColor: active ? 'rgb(252, 229, 154)' : '#fff',
-    cursor: 'pointer',
-    fontSize: 12,
-  })
-
   // while checking session
   if (checkingSession) {
     return (
-      <div className="app">
-        <p>Loading…</p>
-      </div>
+      <>
+        {/* reserve space for the fixed header while loading */}
+        <div style={{ height: TOPBAR_H }} />
+        <div className="app">
+          <p>Loading…</p>
+        </div>
+      </>
     )
   }
 
-  // no session → show auth
+  // no session → show auth (без шапки)
   if (!userEmail) {
     return (
       <div className="app">
@@ -105,43 +136,87 @@ const App = () => {
     )
   }
 
-  // authorized UI
+  // app board
   return (
-    <div className="app">
-      <ListHeader listName={'My to-do list'} getData={getData} />
-      <p className="user-email">Welcome back {userEmail}</p>
-
-      <input
-        placeholder="Search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        aria-label="Search tasks"
-      />
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '8px 0 12px' }}>
-        <div role="tablist" aria-label="Filter tasks" style={{ display: 'flex', gap: 8 }}>
-          <button style={btnStyle(filter === 'all')} onClick={() => setFilter('all')}>All</button>
-          <button style={btnStyle(filter === 'active')} onClick={() => setFilter('active')}>Active</button>
-          <button style={btnStyle(filter === 'completed')} onClick={() => setFilter('completed')}>Completed</button>
+    <>
+      {/* Global top bar: outside the centered app container */}
+      <header
+        className="topbar"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          minHeight: TOPBAR_H,
+          pointerEvents: 'none', // allow background interactions; buttons enable their own pointer events
+        }}
+      >
+        <div
+          style={{
+            pointerEvents: 'auto',
+            fontSize: 14,
+            color: 'var(--muted)',
+            background: 'var(--glass)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: 999,
+            padding: '8px 12px',
+            boxShadow: 'var(--shadow-soft)',
+          }}
+        >
+          Welcome back <strong>{userEmail}</strong>
         </div>
-        <div role="tablist" aria-label="Sort tasks" style={{ display: 'flex', gap: 8 }}>
-          <button style={btnStyle(sortKey === 'date')} onClick={() => setSortKey('date')}>Date</button>
-          <button style={btnStyle(sortKey === 'priority')} onClick={() => setSortKey('priority')}>Priority</button>
-          <button style={btnStyle(sortKey === 'progress')} onClick={() => setSortKey('progress')}>Progress</button>
+
+        <div style={{ pointerEvents: 'auto' }}>
+          <button className="signout" onClick={signOut} style={{ height: 38 }}>
+            SIGN OUT
+          </button>
         </div>
+      </header>
+
+      {/* spacer pushes content below the fixed header */}
+      <div style={{ height: TOPBAR_H }} aria-hidden />
+
+      <div className="app">
+        <ListHeader listName="My to-do list" getData={getData} />
+
+        <input
+          placeholder="Search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search tasks"
+        />
+
+        {/* filter & sort chip controls — inside .button-container to inherit styles */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '8px 0 12px' }}>
+          <div className="button-container" role="tablist" aria-label="Filter tasks" style={{ gap: 8 }}>
+            <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
+            <button className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active</button>
+            <button className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed</button>
+          </div>
+          <div className="button-container" role="tablist" aria-label="Sort tasks" style={{ gap: 8 }}>
+            <button className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>Date</button>
+            <button className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>Priority</button>
+            <button className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>Progress</button>
+          </div>
+        </div>
+
+        {loading && <p>Loading…</p>}
+
+        {!loading && processedTasks.length === 0 && (
+          <p style={{ marginTop: 12 }}>No tasks yet. Create your first one!</p>
+        )}
+
+        {!loading &&
+          processedTasks.map((task) => (
+            <ListItem key={task.id} task={task} getData={getData} />
+          ))}
       </div>
-
-      {loading && <p>Loading…</p>}
-
-      {!loading && processedTasks.length === 0 && (
-        <p style={{ marginTop: 12 }}>No tasks yet. Create your first one!</p>
-      )}
-
-      {!loading &&
-        processedTasks.map((task) => (
-          <ListItem key={task.id} task={task} getData={getData} />
-        ))}
-    </div>
+    </>
   )
 }
 

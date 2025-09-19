@@ -1,5 +1,6 @@
 // client/src/components/Modal.js
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useCookies } from 'react-cookie'
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0))
@@ -15,8 +16,25 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
     progress: editMode ? clamp(task.progress, 0, 100) : 50,
     date: editMode ? task.date : new Date().toISOString(),
     completed: editMode ? Boolean(task.completed) : false,
-    priority: editMode ? Number(task.priority ?? 2) : 2,
+    priority: editMode ? Number(task.priority ?? 2) : 2, // 1..3
   })
+
+  // lock body scroll and esc-to-close
+  useEffect(() => {
+    const { style } = document.body
+    const prevOverflow = style.overflow
+    style.overflow = 'hidden'
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') setShowModal(false)
+    }
+    window.addEventListener('keydown', onKey)
+
+    return () => {
+      style.overflow = prevOverflow
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [setShowModal])
 
   const postData = async (e) => {
     e.preventDefault()
@@ -28,7 +46,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
       const res = await fetch(`${process.env.REACT_APP_SERVERURL}/todos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // send httpOnly token cookie
+        credentials: 'include',
         body: JSON.stringify(data),
       })
       if (res.ok) {
@@ -54,7 +72,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
       const res = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${task.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // send httpOnly token cookie
+        credentials: 'include',
         body: JSON.stringify(data),
       })
       if (res.ok) {
@@ -74,12 +92,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
     const { name, value } = e.target
     setData((prev) => ({
       ...prev,
-      [name]:
-        name === 'progress'
-          ? clamp(value, 0, 100)
-          : name === 'priority'
-          ? clamp(value, 1, 3)
-          : value,
+      [name]: name === 'progress' ? clamp(value, 0, 100) : value,
       date: new Date().toISOString(),
     }))
   }
@@ -93,25 +106,42 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
     }))
   }
 
-  return (
-    <div className="overlay">
-      <div className="modal">
+  const handlePriority = (e) => {
+    const val = Number(e.target.value)
+    setData((prev) => ({
+      ...prev,
+      priority: val,
+      date: new Date().toISOString(),
+    }))
+  }
+
+  const modalEl = (
+    <div
+      className="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-modal-title"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) setShowModal(false)
+      }}
+    >
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="form-title-container">
-          <h3>Let's {mode} your task</h3>
-          <button onClick={() => setShowModal(false)}>X</button>
+          <h3 id="task-modal-title">Let&apos;s {mode} your task</h3>
+          <button onClick={() => setShowModal(false)} aria-label="Close modal">X</button>
         </div>
 
         <form onSubmit={editMode ? editData : postData}>
           <input
             required
-            maxLength={30}
-            placeholder=" Your task goes here"
+            maxLength={200}
+            placeholder="Your task goes here"
             name="title"
             value={data.title || ''}
             onChange={handleChange}
+            aria-label="Task title"
+            autoFocus
           />
-
-          <br />
 
           <label htmlFor="range">Drag to select your current progress</label>
           <input
@@ -126,40 +156,68 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
             onChange={handleChange}
           />
 
-          <br />
+          {/* Priority pills + Completed toggle in one row */}
+          <div className="modal-row">
+            <div className="priority-group">
+              <span className="field-label">Priority</span>
+              <div className="pill-group" role="radiogroup" aria-label="Priority">
+                <label className={`pill ${data.priority === 1 ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="priority"
+                    value={1}
+                    checked={data.priority === 1}
+                    onChange={handlePriority}
+                  />
+                  <span>Low</span>
+                </label>
+                <label className={`pill ${data.priority === 2 ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="priority"
+                    value={2}
+                    checked={data.priority === 2}
+                    onChange={handlePriority}
+                  />
+                  <span>Medium</span>
+                </label>
+                <label className={`pill ${data.priority === 3 ? 'active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="priority"
+                    value={3}
+                    checked={data.priority === 3}
+                    onChange={handlePriority}
+                  />
+                  <span>High</span>
+                </label>
+              </div>
+            </div>
 
-          <label htmlFor="priority">Priority</label>
-          <select
-            id="priority"
-            name="priority"
-            value={data.priority}
-            onChange={handleChange}
-          >
-            <option value={1}>Low</option>
-            <option value={2}>Medium</option>
-            <option value={3}>High</option>
-          </select>
+            <label className="toggle" style={{ marginLeft: 'auto' }}>
+              <span>Completed</span>
+              <input
+                type="checkbox"
+                name="completed"
+                checked={data.completed}
+                onChange={handleToggle}
+                aria-checked={data.completed}
+              />
+              <span className="switch" aria-hidden="true" />
+            </label>
+          </div>
 
-          <label style={{ marginTop: 10 }}>
-            <input
-              type="checkbox"
-              name="completed"
-              checked={data.completed}
-              onChange={handleToggle}
-              style={{ marginRight: 8 }}
-            />
-            Completed
-          </label>
+          {error && <p className="form-error">{error}</p>}
 
-          {error && <p>{error}</p>}
-
-          <button className={mode} type="submit">
+          <button className={`btn primary wide ${mode}`} type="submit">
             {editMode ? 'Save' : 'Create'}
           </button>
         </form>
       </div>
     </div>
   )
+
+  return createPortal(modalEl, document.body)
 }
 
 export default Modal

@@ -17,6 +17,9 @@ const jwt = require('jsonwebtoken')
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:3000'
 const isProd = process.env.NODE_ENV === 'production'
 
+// trust reverse proxy so secure cookies work on Render/Heroku
+app.set('trust proxy', 1)
+
 app.use(
   cors({
     origin: CLIENT_ORIGIN,
@@ -56,6 +59,11 @@ const setAuthCookie = (res, token) => {
     path: '/',
   })
 }
+
+const isValidEmail = (email) =>
+  typeof email === 'string' &&
+  email.length <= 254 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 /* ===================== TODOS ===================== */
 
@@ -174,7 +182,7 @@ app.delete('/todos/:id', auth, async (req, res) => {
 // signup
 app.post('/signup', authLimiter, async (req, res) => {
   const { email, password } = req.body
-  if (!email || !password || password.length < 6) {
+  if (!isValidEmail(email) || !password || password.length < 6) {
     return res.status(400).json({ detail: 'Invalid email or password' })
   }
 
@@ -218,7 +226,105 @@ app.get('/me', auth, (req, res) => {
   res.json({ email: req.user.email })
 })
 
-// logout
+/* ============== USER PROFILE (NEW) ============== */
+/**
+ * PATCH /users/me
+ * Allows changing email and/or password.
+ * Requirements:
+ * - Provide currentPassword to change either email or password
+ * - newPassword (if provided) must be >= 6 chars
+ * - newEmail (if provided) must be valid and unique
+ */
+app.patch('/users/me', auth, async (req, res) => {
+  const { currentPassword, newPassword, newEmail } = req.body
+
+  if (!currentPassword && (newPassword || newEmail)) {
+    return res.status(400).json({ detail: 'Current password is required' })
+  }
+  if (newPassword && newPassword.length < 6) {
+    return res.status(400).json({ detail: 'New password is too short' })
+  }
+  if (newEmail && !isValidEmail(newEmail)) {
+    return res.status(400).json({ detail: 'Invalid email' })
+  }
+
+  try {
+    const userQ = await pool.query('SELECT * FROM users WHERE email = $1', [req.user.email])
+    if (!userQ.rows.length) return res.status(404).json({ detail: 'User not found' })
+
+    // verify current password
+    if (newPassword || newEmail) {
+      const ok = await bcrypt.compare(currentPassword || '', userQ.rows[0].hashed_password)
+      if (!ok) return res.status(401).json({ detail: 'Current password is incorrect' })
+    }
+
+    let updatedEmail = req.user.email
+    let updatedHash = null
+
+    if (newEmail && newEmail !== req.user.email) {
+      // ensure uniqueness
+      const exists = await pool.query('SELECT 1 FROM users WHERE email = $1', [newEmail])
+      if (exists.rows.length) return res.status(409).json({ detail: 'Email already in use' })
+      updatedEmail = newEmail
+    }
+    if (newPassword) {
+      const salt = bcrypt.genSaltSync(10)
+      updatedHash = bcrypt.hashSync(newPassword, salt)
+    }
+
+    // transaction: update user, and todos' user_email if email changed
+    await pool.query('BEGIN')
+    if (updatedEmail !== req.user.email) {
+      await pool.query('UPDATE users SET email = $1 WHERE email = $2', [updatedEmail, req.user.email])
+      await pool.query('UPDATE todos SET user_email = $1 WHERE user_email = $2', [updatedEmail, req.user.email])
+    }
+    if (updatedHash) {
+      await pool.query('UPDATE users SET hashed_password = $1 WHERE email = $2', [updatedHash, updatedEmail])
+    }
+    await pool.query('COMMIT')
+
+    // issue a fresh token if email changed
+    const newToken = jwt.sign({ email: updatedEmail }, process.env.JWT_SECRET, { expiresIn: '1h' })
+    setAuthCookie(res, newToken)
+
+    res.json({ email: updatedEmail })
+  } catch (err) {
+    await pool.query('ROLLBACK').catch(() => {})
+    console.error(err)
+    res.status(500).json({ detail: 'Update failed' })
+  }
+})
+
+/**
+ * DELETE /users/me
+ * Deletes user account and all owned todos.
+ * Clears auth cookie.
+ */
+app.delete('/users/me', auth, async (req, res) => {
+  try {
+    await pool.query('BEGIN')
+    await pool.query('DELETE FROM todos WHERE user_email = $1', [req.user.email])
+    const delUser = await pool.query('DELETE FROM users WHERE email = $1', [req.user.email])
+    await pool.query('COMMIT')
+
+    if (delUser.rowCount === 0) return res.status(404).json({ detail: 'User not found' })
+
+    res.clearCookie('token', {
+      httpOnly: true,
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
+      path: '/',
+    })
+    res.status(204).end()
+  } catch (err) {
+    await pool.query('ROLLBACK').catch(() => {})
+    console.error(err)
+    res.status(500).json({ detail: 'Delete failed' })
+  }
+})
+
+/* ===================== LOGOUT ===================== */
+
 app.post('/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
