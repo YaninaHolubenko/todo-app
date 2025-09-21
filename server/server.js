@@ -13,6 +13,17 @@ const pool = require('./db')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
+// > validation helpers
+const {
+  MAX_TITLE,
+  normalizeEmail,
+  strongPassword,
+  sanitizeTitle,
+  numberInRange,
+  intInRange,
+  parseDateISO,
+} = require('./validation')
+
 /** security & parsers */
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:3000'
 const isProd = process.env.NODE_ENV === 'production'
@@ -27,13 +38,15 @@ app.use(
   })
 )
 app.use(helmet())
-app.use(express.json())
+app.use(express.json({ limit: '32kb' }))
 app.use(cookieParser())
 
 /** limit auth endpoints */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
 })
 
 /** auth middleware */
@@ -60,11 +73,6 @@ const setAuthCookie = (res, token) => {
   })
 }
 
-const isValidEmail = (email) =>
-  typeof email === 'string' &&
-  email.length <= 254 &&
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-
 /* ===================== TODOS ===================== */
 
 // get all todos for a user (protected + same-user check)
@@ -86,19 +94,20 @@ app.get('/todos/:userEmail', auth, async (req, res) => {
 app.post('/todos', auth, async (req, res) => {
   const { title, progress, date, completed, priority } = req.body
 
-  const t = (title ?? '').toString().trim()
-  const progNum = Number(progress)
-  const prioNum = Number(priority)
+  // sanitize & validate
+  const t = sanitizeTitle(title)
+  if (!t) return res.status(400).json({ detail: `Invalid title (1–${MAX_TITLE} chars)` })
 
-  if (!t) return res.status(400).json({ detail: 'Invalid title' })
-  if (!Number.isFinite(progNum) || progNum < 0 || progNum > 100) {
+  const progNum = numberInRange(progress, 0, 100)
+  if (progNum === null) {
     return res.status(400).json({ detail: 'Invalid progress' })
   }
 
   const id = uuidv4()
-  const isoDate = date ? new Date(date).toISOString() : new Date().toISOString()
+  const isoDate = parseDateISO(date) || new Date().toISOString()
   const completedVal = typeof completed === 'boolean' ? completed : false
-  const priorityVal = Number.isInteger(prioNum) ? Math.max(1, Math.min(3, prioNum)) : 2
+  const prio = intInRange(priority, 1, 3)
+  const priorityVal = prio === null ? 2 : prio
   const user_email = req.user.email
 
   try {
@@ -127,17 +136,39 @@ app.put('/todos/:id', auth, async (req, res) => {
     return res.status(500).json({ detail: 'Server error' })
   }
 
-  const t = typeof title === 'string' ? title.trim() : null
-  const progNum = progress === undefined ? null : Math.max(0, Math.min(100, Number(progress)))
-  const isoDate = date ? new Date(date).toISOString() : null
-  const completedVal = typeof completed === 'boolean' ? completed : null
-  const prioNumRaw = priority === undefined ? null : Number(priority)
-  const priorityVal =
-    prioNumRaw === null
-      ? null
-      : Number.isInteger(prioNumRaw)
-      ? Math.max(1, Math.min(3, prioNumRaw))
-      : null
+  // partial, but validate when fields are present
+  let t = null
+  if (title !== undefined) {
+    t = sanitizeTitle(title)
+    if (!t) return res.status(400).json({ detail: `Invalid title (1–${MAX_TITLE} chars)` })
+  }
+
+  let progNum = null
+  if (progress !== undefined) {
+    const n = numberInRange(progress, 0, 100)
+    if (n === null) return res.status(400).json({ detail: 'Invalid progress' })
+    progNum = n
+  }
+
+  let isoDate = null
+  if (date !== undefined) {
+    const d = parseDateISO(date)
+    if (!d) return res.status(400).json({ detail: 'Invalid date' })
+    isoDate = d
+  }
+
+  let completedVal = null
+  if (completed !== undefined) {
+    if (typeof completed !== 'boolean') return res.status(400).json({ detail: 'Invalid completed' })
+    completedVal = completed
+  }
+
+  let priorityVal = null
+  if (priority !== undefined) {
+    const p = intInRange(priority, 1, 3)
+    if (p === null) return res.status(400).json({ detail: 'Invalid priority' })
+    priorityVal = p
+  }
 
   try {
     const result = await pool.query(
@@ -181,8 +212,10 @@ app.delete('/todos/:id', auth, async (req, res) => {
 
 // signup
 app.post('/signup', authLimiter, async (req, res) => {
-  const { email, password } = req.body
-  if (!isValidEmail(email) || !password || password.length < 6) {
+  const email = normalizeEmail(req.body?.email)
+  const password = req.body?.password
+
+  if (!email || !strongPassword(password)) {
     return res.status(400).json({ detail: 'Invalid email or password' })
   }
 
@@ -193,8 +226,8 @@ app.post('/signup', authLimiter, async (req, res) => {
     await pool.query('INSERT INTO users (email, hashed_password) VALUES($1, $2)', [email, hashedPassword])
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' })
     setAuthCookie(res, token)
-    // keep token in JSON for current client compatibility; will remove later
-    res.status(201).json({ email, token })
+    // No JSON body; client relies on httpOnly cookie + /me
+    res.status(204).end()
   } catch (err) {
     console.error(err)
     if (err.code === '23505') return res.status(409).json({ detail: 'User already exists' })
@@ -204,17 +237,24 @@ app.post('/signup', authLimiter, async (req, res) => {
 
 // login
 app.post('/login', authLimiter, async (req, res) => {
-  const { email, password } = req.body
+  const email = normalizeEmail(req.body?.email)
+  const password = req.body?.password
+
+  if (!email || typeof password !== 'string') {
+    return res.status(400).json({ detail: 'Invalid email or password' })
+  }
+
   try {
     const users = await pool.query('SELECT * FROM users WHERE email = $1', [email])
-    if (!users.rows.length) return res.status(401).json({ detail: 'User does not exist' })
+    if (!users.rows.length) return res.status(401).json({ detail: 'Invalid email or password' })
 
     const success = await bcrypt.compare(password, users.rows[0].hashed_password)
-    if (!success) return res.status(401).json({ detail: 'Login failed' })
+    if (!success) return res.status(401).json({ detail: 'Invalid email or password' })
 
     const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' })
     setAuthCookie(res, token)
-    res.json({ email: users.rows[0].email, token }) // keep for now
+    // No JSON body; client relies on httpOnly cookie + /me
+    res.status(204).end()
   } catch (err) {
     console.error(err)
     res.status(500).json({ detail: 'Server error' })
@@ -230,30 +270,39 @@ app.get('/me', auth, (req, res) => {
 /**
  * PATCH /users/me
  * Allows changing email and/or password.
- * Requirements:
- * - Provide currentPassword to change either email or password
- * - newPassword (if provided) must be >= 6 chars
- * - newEmail (if provided) must be valid and unique
  */
 app.patch('/users/me', auth, async (req, res) => {
-  const { currentPassword, newPassword, newEmail } = req.body
+  const currentPassword = req.body?.currentPassword
+  const newPasswordRaw = req.body?.newPassword
+  const newEmailRaw = req.body?.newEmail
 
-  if (!currentPassword && (newPassword || newEmail)) {
+  const wantEmail = typeof newEmailRaw === 'string' && newEmailRaw.trim() !== ''
+  const wantPassword = typeof newPasswordRaw === 'string' && newPasswordRaw.trim() !== ''
+
+  if ((wantEmail || wantPassword) && !currentPassword) {
     return res.status(400).json({ detail: 'Current password is required' })
   }
-  if (newPassword && newPassword.length < 6) {
-    return res.status(400).json({ detail: 'New password is too short' })
+
+  let newEmail = null
+  if (wantEmail) {
+    newEmail = normalizeEmail(newEmailRaw)
+    if (!newEmail) return res.status(400).json({ detail: 'Invalid email' })
   }
-  if (newEmail && !isValidEmail(newEmail)) {
-    return res.status(400).json({ detail: 'Invalid email' })
+
+  let newPassword = null
+  if (wantPassword) {
+    if (!strongPassword(newPasswordRaw)) {
+      return res.status(400).json({ detail: 'New password is too short' })
+    }
+    newPassword = newPasswordRaw
   }
 
   try {
     const userQ = await pool.query('SELECT * FROM users WHERE email = $1', [req.user.email])
     if (!userQ.rows.length) return res.status(404).json({ detail: 'User not found' })
 
-    // verify current password
-    if (newPassword || newEmail) {
+    // verify current password (only if changing something)
+    if (wantEmail || wantPassword) {
       const ok = await bcrypt.compare(currentPassword || '', userQ.rows[0].hashed_password)
       if (!ok) return res.status(401).json({ detail: 'Current password is incorrect' })
     }
@@ -262,7 +311,6 @@ app.patch('/users/me', auth, async (req, res) => {
     let updatedHash = null
 
     if (newEmail && newEmail !== req.user.email) {
-      // ensure uniqueness
       const exists = await pool.query('SELECT 1 FROM users WHERE email = $1', [newEmail])
       if (exists.rows.length) return res.status(409).json({ detail: 'Email already in use' })
       updatedEmail = newEmail

@@ -1,4 +1,4 @@
-/* ===================== THEME — warm neutral + glass ===================== */
+/* client/src/index.css */
 :root{
   --bg-image: none;
 
@@ -59,6 +59,12 @@ body::before{
   pointer-events: none;
 }
 
+/* anchor content under the fixed topbar once signed in */
+.with-topbar{ align-items: flex-start; }
+
+/* spacer component placed in App just below <Topbar/> */
+.topbar-spacer{ height: 64px; }
+
 /* ===================== App wrapper ===================== */
 .app{
   position: relative;
@@ -71,10 +77,9 @@ body::before{
   border: none;
   box-shadow: none;
   min-height: 72vh;
+  isolation: isolate; /* <<< added: isolates stacking so backdrop-filter doesn't sample the Topbar */
 }
-.with-topbar{
-  align-items: flex-start; /* top */
-}
+
 /* ===================== Reusable glass cards ===================== */
 .auth-container-box,
 .list-header,
@@ -107,37 +112,6 @@ body::before{
   margin: 10px 0 4px;
   font-size: 13px;
   color: var(--muted);
-}
-
-/* ===================== Top bar (fixed) ===================== */
-.topbar{
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  pointer-events: none;
-}
-.topbar .chip{
-  pointer-events: auto;
-  font-size: 14px;
-  color: var(--muted);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  padding: 8px 12px;
-  box-shadow: var(--shadow-soft);
-}
-.topbar .signout{
-  pointer-events: auto;
-  height: 38px;
-}
-@media (max-width:560px){
-  .topbar{ padding: 10px 12px; }
-  .topbar .chip{ font-size: 13px; padding: 6px 10px; }
-  .topbar .signout{ height: 34px; }
 }
 
 /* ===================== Inputs ===================== */
@@ -189,7 +163,7 @@ input[aria-label="Search tasks"]{
   border-color: rgba(180,134,98,.45);
 }
 
-/* action buttons */
+/* action buttons used inside task cards */
 .create{
   background: var(--primary);
   color: #fff;
@@ -211,14 +185,15 @@ input[aria-label="Search tasks"]{
 }
 .delete:hover{ background: rgba(161,100,80,.18); }
 
-.signout{
+/* scope signout so the header button can be styled in Topbar.css */
+.app .signout{
   background: rgba(161,100,80,.9);
   color: #fff;
   border: 1px solid var(--danger-600);
 }
-.signout:hover{ background: var(--danger-600); }
+.app .signout:hover{ background: var(--danger-600); }
 
-/* Universal button (optional helper) */
+/* universal button */
 .btn{
   appearance: none;
   border: 1px solid rgba(255,255,255,.55);
@@ -330,7 +305,6 @@ input[aria-label="Search tasks"]{
 }
 
 /* ===================== Modal ===================== */
-/* overlay fully covers with the same background */
 .overlay{
   position: fixed;
   inset: 0;
@@ -344,8 +318,6 @@ input[aria-label="Search tasks"]{
     radial-gradient(1200px 600px at 110% 10%, rgba(0,0,0,.08), transparent 65%),
     var(--bg-image) center/cover no-repeat fixed;
 }
-
-/* modal uses the same glass recipe as list cards */
 .modal{
   width: 100%;
   max-width: 740px;
@@ -357,7 +329,6 @@ input[aria-label="Search tasks"]{
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
 }
-
 .form-title-container{
   display:flex; justify-content:space-between; align-items:center; gap:8px;
   margin-bottom:14px;
@@ -367,15 +338,11 @@ input[aria-label="Search tasks"]{
   padding:6px 8px; border-radius:8px;
 }
 .modal .form-title-container button:hover{ background: rgba(0,0,0,.06); }
-
-/* modal form rhythm */
 .modal form{
   display:flex;
   flex-direction:column;
   gap: 14px;
 }
-
-/* labels */
 .modal label,
 .modal .field-label{
   font-size: 14px;
@@ -403,8 +370,6 @@ input[aria-label="Search tasks"]{
   gap:16px;
   flex-wrap: wrap;
 }
-
-/* pill group */
 .pill-group{
   display:flex;
   gap:8px;
@@ -505,8 +470,6 @@ input[aria-label="Search tasks"]{
   gap: 14px;
 }
 .auth-container-box input{ margin: 0; }
-
-/* submit button on auth form — форма логина не “ломается” */
 .auth-container-box .create{
   width: 100%;
   height: 44px;
@@ -559,6 +522,9 @@ input[aria-label="Search tasks"]{
   .list-header{ flex-direction:column; align-items:flex-start; gap:10px; }
   .outer-bar{ width: 100%; }
   .progress-wrap .outer-bar{ max-width: 100%; }
+}
+@media (max-width:560px){
+  .topbar-spacer{ height: 56px; }
 }
 @media (max-width:414px){ .user-email{ float:none; } }
 @media (max-width:320px){ .task-title{ max-width:100%; } }

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useCookies } from 'react-cookie'
 
 const EyeIcon = ({ open = false }) =>
   open ? (
@@ -17,7 +16,6 @@ const EyeIcon = ({ open = false }) =>
   )
 
 const Auth = () => {
-  const [, setCookie] = useCookies(null)
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -59,14 +57,21 @@ const Auth = () => {
         credentials: 'include',
         body: JSON.stringify({ email: emailValue, password: passwordValue }),
       })
-      const data = await response.json()
 
-      if (!response.ok || data.detail) {
-        setError(data.detail || 'Request failed')
+      // Try to parse JSON safely
+      let data = null
+      try {
+        data = await response.json()
+      } catch {
+        /* ignore parse errors */
+      }
+
+      if (!response.ok || (data && data.detail)) {
+        setError((data && data.detail) || 'Request failed')
         return
       }
 
-      // Ask the browser to store credentials (works on https and localhost)
+      // Optional: store browser credentials on secure contexts
       try {
         if (isLogin && 'credentials' in navigator && window.isSecureContext) {
           const cred = await navigator.credentials.create({
@@ -78,15 +83,7 @@ const Auth = () => {
         /* ignore */
       }
 
-      const commonCookieOpts = {
-        path: '/',
-        sameSite: 'Lax',
-        secure: window.location.protocol === 'https:',
-        maxAge: 60 * 60,
-      }
-      setCookie('Email', data.email, commonCookieOpts)
-      setCookie('AuthToken', data.token, commonCookieOpts)
-
+      // httpOnly cookie is set by the server; just reload to hydrate session via /me
       window.location.reload()
     } catch (err) {
       console.error(err)

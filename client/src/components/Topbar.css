@@ -1,0 +1,99 @@
+/* client/src/components/Topbar.css */
+
+/* Top bar (fixed) */
+.topbar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;                 /* always above glass cards */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  min-height: 64px;
+
+  /* isolate from backdrops to avoid "ghost" painting */
+  isolation: isolate;
+  transform: translateZ(0);
+  will-change: transform;
+
+  /* important: allow normal pointer events on the whole header */
+  pointer-events: auto;
+
+  animation: fadein .25s ease-out both;
+}
+
+/* “Welcome back …” */
+.topbar__chip{
+  font-size: 14px;
+  color: var(--muted);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Right side actions */
+.topbar__actions{
+  display: flex;
+  gap: 8px;
+}
+
+/* Unified button base (same look as list chips) */
+:root{ --topbar-btn-min: 120px; }
+
+.topbar__btn{
+  appearance: none;
+  height: 36px;
+  min-width: var(--topbar-btn-min);
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.65);
+  background: rgba(255,255,255,.95);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform .06s ease,
+    background-color .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    color .15s ease;
+}
+.topbar__btn:hover{ background:#fff; }
+.topbar__btn:active{ transform: translateY(1px); }
+.topbar__btn:focus-visible{
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px rgba(201,163,123,.18);
+}
+
+/* Toggle pressed state */
+.topbar__toggle[aria-pressed="true"]{
+  background:#fff;
+  color: var(--text);
+  border-color: rgba(0,0,0,.10);
+  box-shadow: 0 2px 12px rgba(0,0,0,.10);
+}
+
+/* Sign out same white style */
+.topbar__signout{
+  background: rgba(255,255,255,.95);
+  color: var(--text);
+  border-color: rgba(255,255,255,.65);
+}
+.topbar__signout:hover{
+  background:#fff;
+  border-color: rgba(0,0,0,.10);
+}
+
+/* Compact */
+@media (max-width:560px){
+  .topbar{ padding: 10px 12px; min-height: 56px; }
+  .topbar__chip{ font-size: 13px; padding: 6px 10px; }
+  .topbar__btn{ height: 34px; padding: 0 14px; }
+  :root{ --topbar-btn-min: 108px; }
+}

@@ -1,0 +1,41 @@
+/* Profile */
+.profile{
+  max-width: 560px;
+  margin: 0 auto;
+  animation: fadeUp .35s ease both;
+}
+
+.profile__title{
+  margin: 0 0 12px 0;
+}
+
+.profile__subtitle{
+  margin: 0 0 20px 0;
+  color: rgba(43,43,43,.78);
+}
+
+/* Fields */
+.profile .field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.profile .field + .field{
+  margin-top: 10px;
+}
+
+/* Actions */
+.profile__actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.profile__actions .delete{
+  margin-left: auto;
+}
+
+/* Errors */
+.profile .form-error{
+  margin-top: 8px;
+}

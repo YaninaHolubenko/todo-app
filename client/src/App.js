@@ -1,16 +1,17 @@
+// client/src/App.js
 import ListHeader from './components/ListHeader'
 import ListItem from './components/ListItem'
+import Profile from './components/Profile'
 import Auth from './components/Auth'
+import Topbar from './components/Topbar'
 import { useEffect, useMemo, useState } from 'react'
-import { useCookies } from 'react-cookie'
 
-const TOPBAR_H = 64 // visual height of the fixed header
+const TOPBAR_H = 72 // visual height of the fixed header (kept in JS to guarantee spacing)
 
 const App = () => {
   // session state
-  const [userEmail, setUserEmail] = useState(null)   // comes from /me cookie session
+  const [userEmail, setUserEmail] = useState(null) // comes from /me cookie session
   const [checkingSession, setCheckingSession] = useState(true)
-  const [, , removeCookie] = useCookies(null)
 
   // tasks state
   const [tasks, setTasks] = useState([])
@@ -18,8 +19,9 @@ const App = () => {
 
   // UI state
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState('all')        // all | active | completed
-  const [sortKey, setSortKey] = useState('date')     // date | priority | progress
+  const [filter, setFilter] = useState('all') // all | active | completed
+  const [sortKey, setSortKey] = useState('date') // date | priority | progress
+  const [view, setView] = useState('tasks') // 'tasks' | 'profile'
 
   // fetch current session from backend
   useEffect(() => {
@@ -44,7 +46,7 @@ const App = () => {
     loadSession()
   }, [])
 
-  // when session state changes, toggle a class on <body> so content sticks to the top (not vertically centered)
+  // toggle a class on <body> when session changes
   useEffect(() => {
     const cls = 'with-topbar'
     if (userEmail) document.body.classList.add(cls)
@@ -74,11 +76,20 @@ const App = () => {
 
   // load tasks after session resolves
   useEffect(() => {
-    if (userEmail) getData()
+    if (userEmail && view === 'tasks') getData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userEmail])
+  }, [userEmail, view])
 
-  // sign out moved to top bar
+  const clearLegacyCookies = () => {
+    try {
+      document.cookie = 'Email=; Max-Age=0; path=/'
+      document.cookie = 'AuthToken=; Max-Age=0; path=/'
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // sign out
   const signOut = async () => {
     try {
       await fetch(`${process.env.REACT_APP_SERVERURL}/logout`, {
@@ -88,9 +99,7 @@ const App = () => {
     } catch (err) {
       console.error(err)
     } finally {
-      // legacy cookies cleanup (kept for compatibility)
-      removeCookie('Email')
-      removeCookie('AuthToken')
+      clearLegacyCookies()
       window.location.reload()
     }
   }
@@ -118,8 +127,8 @@ const App = () => {
   if (checkingSession) {
     return (
       <>
-        {/* reserve space for the fixed header while loading */}
-        <div style={{ height: TOPBAR_H }} />
+        {/* spacer for fixed header while loading */}
+        <div style={{ height: TOPBAR_H }} aria-hidden />
         <div className="app">
           <p>Loading…</p>
         </div>
@@ -127,7 +136,7 @@ const App = () => {
     )
   }
 
-  // no session → show auth (без шапки)
+  // no session → show auth (without top bar)
   if (!userEmail) {
     return (
       <div className="app">
@@ -139,82 +148,56 @@ const App = () => {
   // app board
   return (
     <>
-      {/* Global top bar: outside the centered app container */}
-      <header
-        className="topbar"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 18px',
-          minHeight: TOPBAR_H,
-          pointerEvents: 'none', // allow background interactions; buttons enable their own pointer events
-        }}
-      >
-        <div
-          style={{
-            pointerEvents: 'auto',
-            fontSize: 14,
-            color: 'var(--muted)',
-            background: 'var(--glass)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: 999,
-            padding: '8px 12px',
-            boxShadow: 'var(--shadow-soft)',
-          }}
-        >
-          Welcome back <strong>{userEmail}</strong>
-        </div>
-
-        <div style={{ pointerEvents: 'auto' }}>
-          <button className="signout" onClick={signOut} style={{ height: 38 }}>
-            SIGN OUT
-          </button>
-        </div>
-      </header>
+      <Topbar
+        userEmail={userEmail}
+        view={view}
+        onToggle={() => setView(view === 'profile' ? 'tasks' : 'profile')}
+        onSignOut={signOut}
+      />
 
       {/* spacer pushes content below the fixed header */}
       <div style={{ height: TOPBAR_H }} aria-hidden />
 
       <div className="app">
-        <ListHeader listName="My to-do list" getData={getData} />
+        {view === 'profile' ? (
+          <Profile onUpdated={(email) => setUserEmail(email)} />
+        ) : (
+          <>
+            <ListHeader listName="My to-do list" getData={getData} />
 
-        <input
-          placeholder="Search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search tasks"
-        />
+            <input
+              placeholder="Search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search tasks"
+            />
 
-        {/* filter & sort chip controls — inside .button-container to inherit styles */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '8px 0 12px' }}>
-          <div className="button-container" role="tablist" aria-label="Filter tasks" style={{ gap: 8 }}>
-            <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
-            <button className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active</button>
-            <button className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed</button>
-          </div>
-          <div className="button-container" role="tablist" aria-label="Sort tasks" style={{ gap: 8 }}>
-            <button className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>Date</button>
-            <button className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>Priority</button>
-            <button className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>Progress</button>
-          </div>
-        </div>
+            {/* filter & sort chip controls — inside .button-container to inherit styles */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '8px 0 12px' }}>
+              <div className="button-container" role="tablist" aria-label="Filter tasks" style={{ gap: 8 }}>
+                <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
+                <button className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active</button>
+                <button className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed</button>
+              </div>
+              <div className="button-container" role="tablist" aria-label="Sort tasks" style={{ gap: 8 }}>
+                <button className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>Date</button>
+                <button className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>Priority</button>
+                <button className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>Progress</button>
+              </div>
+            </div>
 
-        {loading && <p>Loading…</p>}
+            {loading && <p>Loading…</p>}
 
-        {!loading && processedTasks.length === 0 && (
-          <p style={{ marginTop: 12 }}>No tasks yet. Create your first one!</p>
+            {!loading && processedTasks.length === 0 && (
+              <p style={{ marginTop: 12 }}>No tasks yet. Create your first one!</p>
+            )}
+
+            {!loading &&
+              processedTasks.map((task) => (
+                <ListItem key={task.id} task={task} getData={getData} />
+              ))}
+          </>
         )}
-
-        {!loading &&
-          processedTasks.map((task) => (
-            <ListItem key={task.id} task={task} getData={getData} />
-          ))}
       </div>
     </>
   )

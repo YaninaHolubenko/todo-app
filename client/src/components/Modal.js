@@ -1,17 +1,15 @@
 // client/src/components/Modal.js
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useCookies } from 'react-cookie'
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0))
 
 const Modal = ({ mode, setShowModal, getData, task }) => {
-  const [cookies] = useCookies(null)
   const editMode = mode === 'edit'
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [data, setData] = useState({
-    user_email: editMode ? task.user_email : cookies.Email,
     title: editMode ? task.title : '',
     progress: editMode ? clamp(task.progress, 0, 100) : 50,
     date: editMode ? task.date : new Date().toISOString(),
@@ -26,7 +24,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
     style.overflow = 'hidden'
 
     const onKey = (e) => {
-      if (e.key === 'Escape') setShowModal(false)
+      if (e.key === 'Escape' && !isSubmitting) setShowModal(false)
     }
     window.addEventListener('keydown', onKey)
 
@@ -34,59 +32,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
       style.overflow = prevOverflow
       window.removeEventListener('keydown', onKey)
     }
-  }, [setShowModal])
-
-  const postData = async (e) => {
-    e.preventDefault()
-    if (!data.title || !data.title.trim()) {
-      setError('Please enter your task')
-      return
-    }
-    try {
-      const res = await fetch(`${process.env.REACT_APP_SERVERURL}/todos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      })
-      if (res.ok) {
-        setShowModal(false)
-        getData()
-      } else {
-        const msg = await res.json().catch(() => ({}))
-        setError(msg.detail || 'Failed to create task')
-      }
-    } catch (err) {
-      console.error(err)
-      setError('Network error')
-    }
-  }
-
-  const editData = async (e) => {
-    e.preventDefault()
-    if (!data.title || !data.title.trim()) {
-      setError('Please enter your task')
-      return
-    }
-    try {
-      const res = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${task.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      })
-      if (res.ok) {
-        setShowModal(false)
-        getData()
-      } else {
-        const msg = await res.json().catch(() => ({}))
-        setError(msg.detail || 'Failed to update task')
-      }
-    } catch (err) {
-      console.error(err)
-      setError('Network error')
-    }
-  }
+  }, [setShowModal, isSubmitting])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -115,6 +61,55 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
     }))
   }
 
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (isSubmitting) return
+
+    const title = String(data.title || '').trim()
+    if (!title) {
+      setError('Please enter your task')
+      return
+    }
+    setError('')
+    setIsSubmitting(true)
+
+    const payload = {
+      title,
+      progress: clamp(data.progress, 0, 100),
+      date: new Date().toISOString(),
+      completed: Boolean(data.completed),
+      priority: Number(data.priority ?? 2),
+    }
+
+    const url = editMode
+      ? `${process.env.REACT_APP_SERVERURL}/todos/${task.id}`
+      : `${process.env.REACT_APP_SERVERURL}/todos`
+
+    const method = editMode ? 'PUT' : 'POST'
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+
+      if (res.ok) {
+        setShowModal(false)
+        getData()
+      } else {
+        const msg = await res.json().catch(() => ({}))
+        setError(msg.detail || (editMode ? 'Failed to update task' : 'Failed to create task'))
+      }
+    } catch (err) {
+      console.error(err)
+      setError('Network error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const modalEl = (
     <div
       className="overlay"
@@ -122,24 +117,27 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
       aria-modal="true"
       aria-labelledby="task-modal-title"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) setShowModal(false)
+        if (!isSubmitting && e.target === e.currentTarget) setShowModal(false)
       }}
     >
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="form-title-container">
           <h3 id="task-modal-title">Let&apos;s {mode} your task</h3>
-          <button onClick={() => setShowModal(false)} aria-label="Close modal">X</button>
+          <button onClick={() => !isSubmitting && setShowModal(false)} aria-label="Close modal" disabled={isSubmitting}>
+            X
+          </button>
         </div>
 
-        <form onSubmit={editMode ? editData : postData}>
+        <form onSubmit={handleSubmit} aria-busy={isSubmitting}>
           <input
             required
-            maxLength={200}
+            maxLength={120}
             placeholder="Your task goes here"
             name="title"
             value={data.title || ''}
             onChange={handleChange}
             aria-label="Task title"
+            disabled={isSubmitting}
             autoFocus
           />
 
@@ -154,6 +152,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
             name="progress"
             value={data.progress}
             onChange={handleChange}
+            disabled={isSubmitting}
           />
 
           {/* Priority pills + Completed toggle in one row */}
@@ -168,6 +167,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
                     value={1}
                     checked={data.priority === 1}
                     onChange={handlePriority}
+                    disabled={isSubmitting}
                   />
                   <span>Low</span>
                 </label>
@@ -178,6 +178,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
                     value={2}
                     checked={data.priority === 2}
                     onChange={handlePriority}
+                    disabled={isSubmitting}
                   />
                   <span>Medium</span>
                 </label>
@@ -188,6 +189,7 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
                     value={3}
                     checked={data.priority === 3}
                     onChange={handlePriority}
+                    disabled={isSubmitting}
                   />
                   <span>High</span>
                 </label>
@@ -202,15 +204,16 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
                 checked={data.completed}
                 onChange={handleToggle}
                 aria-checked={data.completed}
+                disabled={isSubmitting}
               />
               <span className="switch" aria-hidden="true" />
             </label>
           </div>
 
-          {error && <p className="form-error">{error}</p>}
+          {error && <p className="form-error" role="alert">{error}</p>}
 
-          <button className={`btn primary wide ${mode}`} type="submit">
-            {editMode ? 'Save' : 'Create'}
+          <button className={`btn primary wide ${mode}`} type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (editMode ? 'Saving…' : 'Creating…') : editMode ? 'Save' : 'Create'}
           </button>
         </form>
       </div>

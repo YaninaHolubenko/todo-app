@@ -50,20 +50,38 @@ const getPriorityMeta = (p) => {
 
 const ListItem = ({ task, getData }) => {
   const [showModal, setShowModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isToggling, setIsToggling] = useState(false)
+  const [error, setError] = useState('')
 
   const deleteItem = async () => {
+    if (isDeleting) return
+    if (!window.confirm('Delete this task?')) return
+    setError('')
+    setIsDeleting(true)
     try {
       const response = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${task.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
-      if (response.ok) getData()
+      if (response.ok) {
+        await getData()
+      } else {
+        const msg = await response.json().catch(() => ({}))
+        setError(msg.detail || 'Failed to delete task')
+      }
     } catch (err) {
       console.error(err)
+      setError('Network error')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   const toggleCompleted = async () => {
+    if (isToggling) return
+    setError('')
+    setIsToggling(true)
     try {
       const response = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${task.id}`, {
         method: 'PUT',
@@ -71,23 +89,32 @@ const ListItem = ({ task, getData }) => {
         credentials: 'include',
         body: JSON.stringify({ completed: !task.completed }),
       })
-      if (response.ok) getData()
+      if (response.ok) {
+        await getData()
+      } else {
+        const msg = await response.json().catch(() => ({}))
+        setError(msg.detail || 'Failed to update task')
+      }
     } catch (err) {
       console.error(err)
+      setError('Network error')
+    } finally {
+      setIsToggling(false)
     }
   }
 
   const isDone = Boolean(task.completed)
   const prio = getPriorityMeta(task.priority)
+  const busy = isDeleting || isToggling
 
   return (
-    <li className="list-item">
+    <li className="list-item" aria-busy={busy}>
       {/* Top row: tick + title on the left, date + priority on the right */}
       <div
         className="item-head"
         style={{
           display: 'flex',
-          alignItems: 'center',          // center vertically
+          alignItems: 'center',
           justifyContent: 'space-between',
           gap: 12,
           width: '100%',
@@ -97,13 +124,14 @@ const ListItem = ({ task, getData }) => {
           className="info-container"
           style={{
             display: 'flex',
-            alignItems: 'center',        // center vertically
+            alignItems: 'center',
             gap: 12,
             minWidth: 0,
             flex: '1 1 auto',
+            opacity: isToggling ? 0.7 : 1,
           }}
         >
-          <TickIcon  active={isDone} onClick={toggleCompleted} />
+          <TickIcon active={isDone} onClick={busy ? undefined : toggleCompleted} />
           <p
             className="task-title"
             style={{
@@ -192,10 +220,20 @@ const ListItem = ({ task, getData }) => {
         </div>
 
         <div className="button-container" style={{ gap: 10 }}>
-          <button className="edit" onClick={() => setShowModal(true)}>EDIT</button>
-          <button className="delete" onClick={deleteItem}>DELETE</button>
+          <button className="edit" onClick={() => setShowModal(true)} disabled={isDeleting}>
+            {isDeleting ? '...' : 'EDIT'}
+          </button>
+          <button className="delete" onClick={deleteItem} disabled={isDeleting}>
+            {isDeleting ? 'DELETING…' : 'DELETE'}
+          </button>
         </div>
       </div>
+
+      {error && (
+        <p className="form-error" role="alert" style={{ marginTop: 8 }}>
+          {error}
+        </p>
+      )}
 
       {showModal && (
         <Modal
