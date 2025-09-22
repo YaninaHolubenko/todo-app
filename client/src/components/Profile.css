@@ -1,3 +1,5 @@
+/* client/src/components/Profile.css */
+
 /* Profile */
 .profile{
   max-width: 560px;
@@ -38,4 +40,11 @@
 /* Errors */
 .profile .form-error{
   margin-top: 8px;
+  color: var(--danger-600);
+}
+
+/* Success */
+.profile .form-success{
+  margin-top: 8px;
+  color: var(--success, #2f855a);
 }

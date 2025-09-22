@@ -1,13 +1,12 @@
-// client/src/components/Topbar.js
 import './Topbar.css'
 
 const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
   const isProfile = view === 'profile'
 
   return (
-    <header className="topbar">
-      <div className="topbar__chip">
-        Welcome back <strong>{userEmail}</strong>
+    <header className="topbar" role="banner">
+      <div className="topbar__chip" title={userEmail || ''}>
+        Welcome back <strong className="topbar__email">{userEmail}</strong>
       </div>
 
       <div className="topbar__actions">

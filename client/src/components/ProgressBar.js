@@ -1,19 +1,20 @@
 // client/src/components/ProgressBar.js
-const clamp = (n) => Math.max(0, Math.min(100, Number(n) || 0))
+import './ProgressBar.css'
 
-const getColor = (p) => {
-  if (p <= 33) return 'rgb(255, 175, 163)'   
-  if (p <= 66) return 'rgb(255, 214, 161)'   
-  return 'rgb(182, 223, 186)'                
-}
+const clamp = (n) => Math.max(0, Math.min(100, Number(n) || 0))
 
 const ProgressBar = ({ progress }) => {
   const pct = clamp(progress)
+
+  let colorClass = 'low'
+  if (pct > 66) colorClass = 'high'
+  else if (pct > 33) colorClass = 'medium'
+
   return (
     <div className="outer-bar">
       <div
-        className="inner-bar"
-        style={{ width: `${pct}%`, backgroundColor: getColor(pct) }}
+        className={`inner-bar ${colorClass}`}
+        style={{ width: `${pct}%` }}
       />
     </div>
   )

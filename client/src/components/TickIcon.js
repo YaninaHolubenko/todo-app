@@ -1,7 +1,15 @@
 // client/src/components/TickIcon.js
 const TickIcon = ({ active = false, onClick, size = 30 }) => {
+  const isClickable = typeof onClick === 'function'
   const color = active ? 'var(--primary-600)' : '#888'
-  const style = { cursor: onClick ? 'pointer' : 'default', color }
+
+  const handleKeyDown = (e) => {
+    if (!isClickable) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClick(e)
+    }
+  }
 
   return (
     <svg
@@ -10,10 +18,14 @@ const TickIcon = ({ active = false, onClick, size = 30 }) => {
       width={size}
       height={size}
       viewBox="0 0 512 512"
-      onClick={onClick}
-      style={style}
+      onClick={isClickable ? onClick : undefined}
+      onKeyDown={handleKeyDown}
+      style={{ cursor: isClickable ? 'pointer' : 'default', color }}
+      role={isClickable ? 'button' : 'img'}
+      aria-pressed={isClickable ? active : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      title={active ? 'Completed' : 'Not completed'}
     >
-      <title>status</title>
       <circle
         cx="256"
         cy="256"

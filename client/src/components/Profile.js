@@ -131,7 +131,7 @@ const Profile = ({ onUpdated }) => {
         Update your email and password. Leave a field blank to keep it unchanged.
       </p>
 
-      <form onSubmit={handleSubmit} aria-busy={loading}>
+      <form onSubmit={handleSubmit} aria-busy={loading} noValidate>
         <div className="field">
           <label htmlFor="currentPassword">Current password</label>
           <div className="pwd-wrap">
@@ -224,7 +224,7 @@ const Profile = ({ onUpdated }) => {
         </div>
 
         {error && <p className="form-error" role="alert">{error}</p>}
-        {success && <p role="status" style={{ color: 'var(--success, #2f855a)' }}>{success}</p>}
+        {success && <p className="form-success" role="status">{success}</p>}
 
         <div className="button-container profile__actions">
           <button className="create" type="submit" disabled={loading}>

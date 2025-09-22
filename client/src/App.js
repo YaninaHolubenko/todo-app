@@ -4,13 +4,16 @@ import ListItem from './components/ListItem'
 import Profile from './components/Profile'
 import Auth from './components/Auth'
 import Topbar from './components/Topbar'
+import { AnimatePresence, motion } from 'framer-motion'
+import './App.css'
+import './components/Filters.css'
 import { useEffect, useMemo, useState } from 'react'
 
-const TOPBAR_H = 72 // visual height of the fixed header (kept in JS to guarantee spacing)
+const TOPBAR_H = 72
 
 const App = () => {
   // session state
-  const [userEmail, setUserEmail] = useState(null) // comes from /me cookie session
+  const [userEmail, setUserEmail] = useState(null)
   const [checkingSession, setCheckingSession] = useState(true)
 
   // tasks state
@@ -23,7 +26,6 @@ const App = () => {
   const [sortKey, setSortKey] = useState('date') // date | priority | progress
   const [view, setView] = useState('tasks') // 'tasks' | 'profile'
 
-  // fetch current session from backend
   useEffect(() => {
     const loadSession = async () => {
       try {
@@ -89,7 +91,6 @@ const App = () => {
     }
   }
 
-  // sign out
   const signOut = async () => {
     try {
       await fetch(`${process.env.REACT_APP_SERVERURL}/logout`, {
@@ -104,7 +105,7 @@ const App = () => {
     }
   }
 
-  // apply search, filter and sort
+  // search/filter/sort pipeline
   const processedTasks = useMemo(() => {
     let arr = Array.isArray(tasks) ? [...tasks] : []
 
@@ -123,11 +124,9 @@ const App = () => {
     return arr
   }, [tasks, query, filter, sortKey])
 
-  // while checking session
   if (checkingSession) {
     return (
       <>
-        {/* spacer for fixed header while loading */}
         <div style={{ height: TOPBAR_H }} aria-hidden />
         <div className="app">
           <p>Loading…</p>
@@ -136,7 +135,6 @@ const App = () => {
     )
   }
 
-  // no session → show auth (without top bar)
   if (!userEmail) {
     return (
       <div className="app">
@@ -145,7 +143,6 @@ const App = () => {
     )
   }
 
-  // app board
   return (
     <>
       <Topbar
@@ -155,7 +152,6 @@ const App = () => {
         onSignOut={signOut}
       />
 
-      {/* spacer pushes content below the fixed header */}
       <div style={{ height: TOPBAR_H }} aria-hidden />
 
       <div className="app">
@@ -172,30 +168,36 @@ const App = () => {
               aria-label="Search tasks"
             />
 
-            {/* filter & sort chip controls — inside .button-container to inherit styles */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', margin: '8px 0 12px' }}>
-              <div className="button-container" role="tablist" aria-label="Filter tasks" style={{ gap: 8 }}>
-                <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
-                <button className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active</button>
-                <button className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed</button>
-              </div>
-              <div className="button-container" role="tablist" aria-label="Sort tasks" style={{ gap: 8 }}>
-                <button className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>Date</button>
-                <button className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>Priority</button>
-                <button className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>Progress</button>
-              </div>
+            {/* chip toolbars: filters & sorting */}
+            <div className="chiprow">
+              <motion.div className="chipbar" role="tablist" aria-label="Filter tasks" layout>
+                <motion.button whileTap={{ scale: 0.98 }} className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</motion.button>
+                <motion.button whileTap={{ scale: 0.98 }} className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active</motion.button>
+                <motion.button whileTap={{ scale: 0.98 }} className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed</motion.button>
+              </motion.div>
+
+              <motion.div className="chipbar" role="tablist" aria-label="Sort tasks" layout>
+                <motion.button whileTap={{ scale: 0.98 }} className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>Date</motion.button>
+                <motion.button whileTap={{ scale: 0.98 }} className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>Priority</motion.button>
+                <motion.button whileTap={{ scale: 0.98 }} className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>Progress</motion.button>
+              </motion.div>
             </div>
 
             {loading && <p>Loading…</p>}
 
             {!loading && processedTasks.length === 0 && (
-              <p style={{ marginTop: 12 }}>No tasks yet. Create your first one!</p>
+              <p className="empty-hint">No tasks yet. Create your first one!</p>
             )}
 
-            {!loading &&
-              processedTasks.map((task) => (
-                <ListItem key={task.id} task={task} getData={getData} />
-              ))}
+            {!loading && (
+              <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
+                <AnimatePresence initial={false}>
+                  {processedTasks.map((task) => (
+                    <ListItem key={task.id} task={task} getData={getData} />
+                  ))}
+                </AnimatePresence>
+              </ul>
+            )}
           </>
         )}
       </div>

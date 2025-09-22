@@ -1,8 +1,21 @@
-// client/src/components/Modal.js
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { motion } from 'framer-motion'
+import './Modal.css'
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0))
+const toPriorityNum = (v) => {
+  if (typeof v === 'string') {
+    const s = v.toLowerCase()
+    if (s === 'low') return 1
+    if (s === 'high') return 3
+    if (s === 'medium') return 2
+    const n = Number(v)
+    return Number.isFinite(n) ? Math.min(3, Math.max(1, n)) : 2
+  }
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.min(3, Math.max(1, n)) : 2
+}
 
 const Modal = ({ mode, setShowModal, getData, task }) => {
   const editMode = mode === 'edit'
@@ -14,210 +27,149 @@ const Modal = ({ mode, setShowModal, getData, task }) => {
     progress: editMode ? clamp(task.progress, 0, 100) : 50,
     date: editMode ? task.date : new Date().toISOString(),
     completed: editMode ? Boolean(task.completed) : false,
-    priority: editMode ? Number(task.priority ?? 2) : 2, // 1..3
+    priority: editMode ? toPriorityNum(task.priority) : 2, // 1 low, 2 medium, 3 high
   })
 
-  // lock body scroll and esc-to-close
   useEffect(() => {
-    const { style } = document.body
-    const prevOverflow = style.overflow
-    style.overflow = 'hidden'
+    const onEsc = (e) => e.key === 'Escape' && setShowModal(false)
+    document.addEventListener('keydown', onEsc)
+    return () => document.removeEventListener('keydown', onEsc)
+  }, [setShowModal])
 
-    const onKey = (e) => {
-      if (e.key === 'Escape' && !isSubmitting) setShowModal(false)
+  const validate = () => {
+    if (!data.title || data.title.trim().length < 2) {
+      setError('Title must be at least 2 characters')
+      return false
     }
-    window.addEventListener('keydown', onKey)
-
-    return () => {
-      style.overflow = prevOverflow
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [setShowModal, isSubmitting])
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setData((prev) => ({
-      ...prev,
-      [name]: name === 'progress' ? clamp(value, 0, 100) : value,
-      date: new Date().toISOString(),
-    }))
-  }
-
-  const handleToggle = (e) => {
-    const { name, checked } = e.target
-    setData((prev) => ({
-      ...prev,
-      [name]: checked,
-      date: new Date().toISOString(),
-    }))
-  }
-
-  const handlePriority = (e) => {
-    const val = Number(e.target.value)
-    setData((prev) => ({
-      ...prev,
-      priority: val,
-      date: new Date().toISOString(),
-    }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (isSubmitting) return
-
-    const title = String(data.title || '').trim()
-    if (!title) {
-      setError('Please enter your task')
-      return
+    if (data.progress < 0 || data.progress > 100) {
+      setError('Progress must be between 0 and 100')
+      return false
     }
     setError('')
-    setIsSubmitting(true)
+    return true
+  }
 
-    const payload = {
-      title,
-      progress: clamp(data.progress, 0, 100),
-      date: new Date().toISOString(),
-      completed: Boolean(data.completed),
-      priority: Number(data.priority ?? 2),
-    }
-
-    const url = editMode
-      ? `${process.env.REACT_APP_SERVERURL}/todos/${task.id}`
-      : `${process.env.REACT_APP_SERVERURL}/todos`
-
-    const method = editMode ? 'PUT' : 'POST'
-
+  const submitCreate = async (e) => {
+    e.preventDefault()
+    if (!validate()) return
     try {
-      const res = await fetch(url, {
-        method,
+      setIsSubmitting(true)
+      const res = await fetch(`${process.env.REACT_APP_SERVERURL}/todos`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(data),
       })
-
-      if (res.ok) {
-        setShowModal(false)
-        getData()
-      } else {
-        const msg = await res.json().catch(() => ({}))
-        setError(msg.detail || (editMode ? 'Failed to update task' : 'Failed to create task'))
-      }
+      if (!res.ok) throw new Error('Failed to create task')
+      await getData()
+      setShowModal(false)
     } catch (err) {
-      console.error(err)
-      setError('Network error')
+      setError(err.message || 'Something went wrong')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const submitEdit = async (e) => {
+    e.preventDefault()
+    if (!validate()) return
+    try {
+      setIsSubmitting(true)
+      const res = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update task')
+      await getData()
+      setShowModal(false)
+    } catch (err) {
+      setError(err.message || 'Something went wrong')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const modalEl = (
-    <div
+    <motion.div
       className="overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="task-modal-title"
-      onMouseDown={(e) => {
-        if (!isSubmitting && e.target === e.currentTarget) setShowModal(false)
-      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={() => setShowModal(false)}
     >
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+      <motion.div
+        className="modal"
+        initial={{ y: 14, scale: 0.98, opacity: 0 }}
+        animate={{ y: 0, scale: 1, opacity: 1 }}
+        exit={{ y: 8, scale: 0.98, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 28, mass: 0.6 }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={editMode ? 'Edit task dialog' : 'Create task dialog'}
+      >
         <div className="form-title-container">
-          <h3 id="task-modal-title">Let&apos;s {mode} your task</h3>
-          <button onClick={() => !isSubmitting && setShowModal(false)} aria-label="Close modal" disabled={isSubmitting}>
-            X
-          </button>
+          <h2>{editMode ? 'Edit Task' : 'Create Task'}</h2>
+          <button aria-label="Close" onClick={() => setShowModal(false)}>✕</button>
         </div>
 
-        <form onSubmit={handleSubmit} aria-busy={isSubmitting}>
+        <form onSubmit={editMode ? submitEdit : submitCreate}>
+          <label className="field-label" htmlFor="title">Title</label>
           <input
-            required
-            maxLength={120}
-            placeholder="Your task goes here"
-            name="title"
-            value={data.title || ''}
-            onChange={handleChange}
-            aria-label="Task title"
-            disabled={isSubmitting}
-            autoFocus
+            id="title"
+            type="text"
+            maxLength={140}
+            value={data.title}
+            onChange={(e) => setData({ ...data, title: e.target.value })}
           />
 
-          <label htmlFor="range">Drag to select your current progress</label>
+          <label className="field-label" htmlFor="progress">Progress</label>
           <input
+            id="progress"
             className="range"
-            required
             type="range"
-            id="range"
             min="0"
             max="100"
-            name="progress"
             value={data.progress}
-            onChange={handleChange}
-            disabled={isSubmitting}
+            onChange={(e) => setData({ ...data, progress: clamp(e.target.value, 0, 100) })}
           />
 
-          {/* Priority pills + Completed toggle in one row */}
           <div className="modal-row">
-            <div className="priority-group">
-              <span className="field-label">Priority</span>
-              <div className="pill-group" role="radiogroup" aria-label="Priority">
-                <label className={`pill ${data.priority === 1 ? 'active' : ''}`}>
+            <div className="pill-group" role="group" aria-label="Priority">
+              {[{ val: 1, label: 'Low' }, { val: 2, label: 'Medium' }, { val: 3, label: 'High' }].map(({ val, label }) => (
+                <label key={val} className="pill">
                   <input
                     type="radio"
                     name="priority"
-                    value={1}
-                    checked={data.priority === 1}
-                    onChange={handlePriority}
-                    disabled={isSubmitting}
+                    value={val}
+                    checked={data.priority === val}
+                    onChange={(e) => setData({ ...data, priority: toPriorityNum(e.target.value) })}
                   />
-                  <span>Low</span>
+                  <span>{label}</span>
                 </label>
-                <label className={`pill ${data.priority === 2 ? 'active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="priority"
-                    value={2}
-                    checked={data.priority === 2}
-                    onChange={handlePriority}
-                    disabled={isSubmitting}
-                  />
-                  <span>Medium</span>
-                </label>
-                <label className={`pill ${data.priority === 3 ? 'active' : ''}`}>
-                  <input
-                    type="radio"
-                    name="priority"
-                    value={3}
-                    checked={data.priority === 3}
-                    onChange={handlePriority}
-                    disabled={isSubmitting}
-                  />
-                  <span>High</span>
-                </label>
-              </div>
+              ))}
             </div>
 
-            <label className="toggle" style={{ marginLeft: 'auto' }}>
+            <label className="toggle">
               <span>Completed</span>
               <input
                 type="checkbox"
-                name="completed"
                 checked={data.completed}
-                onChange={handleToggle}
-                aria-checked={data.completed}
-                disabled={isSubmitting}
+                onChange={(e) => setData({ ...data, completed: e.target.checked })}
               />
-              <span className="switch" aria-hidden="true" />
             </label>
           </div>
 
           {error && <p className="form-error" role="alert">{error}</p>}
 
-          <button className={`btn primary wide ${mode}`} type="submit" disabled={isSubmitting}>
+          <button className="btn primary wide" type="submit" disabled={isSubmitting}>
             {isSubmitting ? (editMode ? 'Saving…' : 'Creating…') : editMode ? 'Save' : 'Create'}
           </button>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 
   return createPortal(modalEl, document.body)

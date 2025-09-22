@@ -1,0 +1,58 @@
+/* App-level layout */
+.app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: clamp(32px, 8vh, 80px) auto;
+  padding: 16px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-height: 72vh;
+  isolation: isolate;
+}
+
+/* Chip rows container (wraps multiple chipbars) */
+.chiprow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+
+/* Chipbar (buttons look consistent with global .button styles) */
+.chipbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chipbar button {
+  appearance: none;
+  border-radius: 999px;
+  font-size: 13px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255,255,255,.55);
+  background: rgba(255,255,255,.6);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform .06s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.chipbar button:hover { background: rgba(255,255,255,.75); }
+.chipbar button:active { transform: translateY(1px); }
+
+.chipbar button.active,
+.chipbar button.is-active,
+.chipbar button[aria-pressed="true"]{
+  background: var(--primary-50);
+  color: var(--primary-600);
+  border-color: rgba(111,88,72,.58);
+}
+
+/* Responsive utility */
+@media (max-width: 560px){
+  .app { padding: 14px; }
+}

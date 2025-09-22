@@ -1,0 +1,80 @@
+/* client/src/components/Filters.css */
+
+/* row that holds both chipbars (filters + sorting) */
+.chipbar-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+
+/* Chip toolbar for filters/sorting */
+.chipbar{
+  --chip-min-w: 96px;
+  --chip-h: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chipbar button{
+  appearance: none;
+  min-width: var(--chip-min-w);
+  height: var(--chip-h);
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.55);
+  background: rgba(255,255,255,.60);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform .06s ease,
+    background-color .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    box-shadow .15s ease;
+}
+
+.chipbar button:hover{ background: rgba(255,255,255,.75); }
+.chipbar button:active{ transform: translateY(1px); }
+
+.chipbar button:focus-visible{
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px rgba(201,163,123,.18);
+}
+
+/* selected/pressed states */
+.chipbar button.active,
+.chipbar button.is-active,
+.chipbar button[aria-pressed="true"]{
+  background: var(--primary-50);
+  color: var(--primary-600);
+  border-color: rgba(111,88,72,.58);
+}
+
+/* disabled (на будущее) */
+.chipbar button:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* empty state hint under list (используется в App) */
+.empty-hint{ margin-top: 12px; }
+
+/* Responsive tweaks */
+@media (max-width: 560px){
+  .chipbar-row{ gap: 8px; }
+  .chipbar{
+    --chip-min-w: 88px;
+    --chip-h: 34px;
+    gap: 6px;
+  }
+  .chipbar button{ padding: 0 14px; }
+}

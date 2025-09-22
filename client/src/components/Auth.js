@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import './Auth.css'
 
 const EyeIcon = ({ open = false }) =>
   open ? (
@@ -26,8 +27,13 @@ const Auth = () => {
   const [loading, setLoading] = useState(false)
 
   const viewLogin = (status) => {
-    setError('')
     setIsLogin(status)
+    setError('')
+    setShowPwd(false)
+    setShowConfirmPwd(false)
+    // clear fields when switching modes to avoid stale state
+    setPassword('')
+    setConfirmPassword('')
   }
 
   const handleSubmit = async (e) => {
@@ -58,20 +64,14 @@ const Auth = () => {
         body: JSON.stringify({ email: emailValue, password: passwordValue }),
       })
 
-      // Try to parse JSON safely
       let data = null
-      try {
-        data = await response.json()
-      } catch {
-        /* ignore parse errors */
-      }
+      try { data = await response.json() } catch { /* ignore */ }
 
       if (!response.ok || (data && data.detail)) {
         setError((data && data.detail) || 'Request failed')
         return
       }
 
-      // Optional: store browser credentials on secure contexts
       try {
         if (isLogin && 'credentials' in navigator && window.isSecureContext) {
           const cred = await navigator.credentials.create({
@@ -79,11 +79,8 @@ const Auth = () => {
           })
           if (cred) await navigator.credentials.store(cred)
         }
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
 
-      // httpOnly cookie is set by the server; just reload to hydrate session via /me
       window.location.reload()
     } catch (err) {
       console.error(err)
@@ -159,7 +156,7 @@ const Auth = () => {
             </div>
           )}
 
-          {error && <p role="alert" style={{ marginTop: 2 }}>{error}</p>}
+          {error && <p className="form-error" role="alert">{error}</p>}
 
           <button className="create" type="submit" disabled={loading}>
             {loading ? 'Please wait…' : isLogin ? 'Login' : 'Sign Up'}

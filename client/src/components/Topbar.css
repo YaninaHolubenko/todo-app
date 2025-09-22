@@ -1,22 +1,17 @@
-/* client/src/components/Topbar.css */
-
 /* Top bar (fixed) */
 .topbar{
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 9999;                 /* always above glass cards */
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
   min-height: 64px;
 
-  /* isolate from backdrops to avoid "ghost" painting */
   isolation: isolate;
   transform: translateZ(0);
   will-change: transform;
-
-  /* important: allow normal pointer events on the whole header */
   pointer-events: auto;
 
   animation: fadein .25s ease-out both;
@@ -24,6 +19,10 @@
 
 /* “Welcome back …” */
 .topbar__chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 60vw;                 /* prevent overflow on narrow screens */
   font-size: 14px;
   color: var(--muted);
   background: var(--glass);
@@ -31,6 +30,13 @@
   border-radius: 999px;
   padding: 8px 12px;
   box-shadow: var(--shadow-soft);
+}
+.topbar__email{
+  max-width: 46vw;                 /* fit inside chip */
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Right side actions */
@@ -79,7 +85,7 @@
   box-shadow: 0 2px 12px rgba(0,0,0,.10);
 }
 
-/* Sign out same white style */
+/* Sign out */
 .topbar__signout{
   background: rgba(255,255,255,.95);
   color: var(--text);
@@ -91,9 +97,14 @@
 }
 
 /* Compact */
+@media (max-width: 720px){
+  .topbar__chip{ max-width: 54vw; }
+  .topbar__email{ max-width: 40vw; }
+}
 @media (max-width:560px){
   .topbar{ padding: 10px 12px; min-height: 56px; }
-  .topbar__chip{ font-size: 13px; padding: 6px 10px; }
+  .topbar__chip{ font-size: 13px; padding: 6px 10px; max-width: 58vw; }
+  .topbar__email{ max-width: 44vw; }
   .topbar__btn{ height: 34px; padding: 0 14px; }
   :root{ --topbar-btn-min: 108px; }
 }

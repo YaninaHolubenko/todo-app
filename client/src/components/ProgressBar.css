@@ -1,0 +1,40 @@
+/* client/src/components/ProgressBar.css */
+
+.outer-bar {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.inner-bar {
+  height: 100%;
+  width: 0;
+  transition: width 0.28s ease, background-color 0.2s ease;
+  transform-origin: left;
+  animation: bar-reveal 0.24s ease-out both;
+}
+
+.inner-bar.low {
+  background-color: rgb(255, 175, 163);
+}
+.inner-bar.medium {
+  background-color: rgb(255, 214, 161);
+}
+.inner-bar.high {
+  background-color: rgb(182, 223, 186);
+}
+
+@keyframes bar-reveal {
+  from { transform: scaleX(0.02); opacity: 0.6; }
+  to   { transform: scaleX(1);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inner-bar {
+    transition: none;
+    animation: none;
+  }
+}
