@@ -1,5 +1,11 @@
-import { useState } from 'react'
+//client\src\components\Auth.js
+import { useCallback, useMemo, useState } from 'react'
+import Button from './ui/Button'
 import './Auth.css'
+
+const FieldLabel = ({ htmlFor, children }) => (
+  <label htmlFor={htmlFor} className="sr-only">{children}</label>
+)
 
 const EyeIcon = ({ open = false }) =>
   open ? (
@@ -26,17 +32,23 @@ const Auth = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const viewLogin = (status) => {
+  const title = useMemo(
+    () => (isLogin ? 'Please log in' : 'Create an account'),
+    [isLogin]
+  )
+
+  const emailRe = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i, [])
+
+  const viewLogin = useCallback((status) => {
     setIsLogin(status)
     setError('')
     setShowPwd(false)
     setShowConfirmPwd(false)
-    // clear fields when switching modes to avoid stale state
     setPassword('')
     setConfirmPassword('')
-  }
+  }, [])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
     if (loading) return
 
@@ -44,7 +56,6 @@ const Auth = () => {
     const emailValue = String(fd.get('email') || '').trim().toLowerCase()
     const passwordValue = String(fd.get('password') || '').trim()
     const confirmValue = String(fd.get('confirmPassword') || '').trim()
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i
 
     if (!emailValue) return setError('Please enter your email')
     if (!emailRe.test(emailValue)) return setError('Please enter a valid email')
@@ -64,14 +75,19 @@ const Auth = () => {
         body: JSON.stringify({ email: emailValue, password: passwordValue }),
       })
 
+      // backend returns 204 on success (no JSON). Attempt to parse JSON only if present.
       let data = null
-      try { data = await response.json() } catch { /* ignore */ }
+      const text = await response.text()
+      if (text) {
+        try { data = JSON.parse(text) } catch { /* ignore parse fail */ }
+      }
 
       if (!response.ok || (data && data.detail)) {
         setError((data && data.detail) || 'Request failed')
         return
       }
 
+      // optional: store credentials (best-effort)
       try {
         if (isLogin && 'credentials' in navigator && window.isSecureContext) {
           const cred = await navigator.credentials.create({
@@ -88,15 +104,26 @@ const Auth = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [emailRe, isLogin, loading])
+
+  const canSubmit = useMemo(() => {
+    if (loading) return false
+    if (!emailRe.test(String(email).trim().toLowerCase())) return false
+    if (String(password).trim().length < 6) return false
+    if (!isLogin && String(confirmPassword).trim().length < 6) return false
+    if (!isLogin && String(password).trim() !== String(confirmPassword).trim()) return false
+    return true
+  }, [email, password, confirmPassword, isLogin, emailRe, loading])
 
   return (
     <div className="auth-container">
       <div className="auth-container-box">
         <form onSubmit={handleSubmit} noValidate autoComplete="on">
-          <h2 className="auth-title">{isLogin ? 'Please log in' : 'Create an account'}</h2>
+          <h2 className="auth-title">{title}</h2>
 
+          <FieldLabel htmlFor="auth-email">Email</FieldLabel>
           <input
+            id="auth-email"
             name="email"
             type="email"
             placeholder="email"
@@ -107,11 +134,16 @@ const Auth = () => {
             spellCheck="false"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              if (error) setError('')
+            }}
           />
 
           <div className="pwd-wrap">
+            <FieldLabel htmlFor="auth-password">Password</FieldLabel>
             <input
+              id="auth-password"
               name="password"
               type={showPwd ? 'text' : 'password'}
               placeholder="password"
@@ -119,22 +151,30 @@ const Auth = () => {
               minLength={6}
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value)
+                if (error) setError('')
+              }}
             />
-            <button
+            <Button
               type="button"
               className="pwd-toggle"
+              variant="ghost"
               aria-label={showPwd ? 'Hide password' : 'Show password'}
               aria-pressed={showPwd}
               onClick={() => setShowPwd((v) => !v)}
+              disabled={loading}
+              title={showPwd ? 'Hide password' : 'Show password'}
             >
               <EyeIcon open={showPwd} />
-            </button>
+            </Button>
           </div>
 
           {!isLogin && (
             <div className="pwd-wrap">
+              <FieldLabel htmlFor="auth-confirm">Confirm password</FieldLabel>
               <input
+                id="auth-confirm"
                 name="confirmPassword"
                 type={showConfirmPwd ? 'text' : 'password'}
                 placeholder="confirm password"
@@ -142,30 +182,50 @@ const Auth = () => {
                 minLength={6}
                 required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value)
+                  if (error) setError('')
+                }}
               />
-              <button
+              <Button
                 type="button"
                 className="pwd-toggle"
+                variant="ghost"
                 aria-label={showConfirmPwd ? 'Hide confirm password' : 'Show confirm password'}
                 aria-pressed={showConfirmPwd}
                 onClick={() => setShowConfirmPwd((v) => !v)}
+                disabled={loading}
+                title={showConfirmPwd ? 'Hide confirm password' : 'Show confirm password'}
               >
                 <EyeIcon open={showConfirmPwd} />
-              </button>
+              </Button>
             </div>
           )}
 
-          {error && <p className="form-error" role="alert">{error}</p>}
+          {error && (
+            <p className="form-error" role="alert" aria-live="polite">
+              {error}
+            </p>
+          )}
 
-          <button className="create" type="submit" disabled={loading}>
-            {loading ? 'Please wait…' : isLogin ? 'Login' : 'Sign Up'}
-          </button>
+          <Button
+            type="submit"
+            variant="primary"
+            className="create"
+            disabled={!canSubmit}
+            loading={loading}
+          >
+            {isLogin ? 'Login' : 'Sign Up'}
+          </Button>
         </form>
 
         <div className="auth-options">
-          <button type="button" onClick={() => viewLogin(false)}>Sign Up</button>
-          <button type="button" onClick={() => viewLogin(true)}>Login</button>
+          <Button type="button" variant="ghost" onClick={() => viewLogin(false)} disabled={loading}>
+            Sign Up
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => viewLogin(true)} disabled={loading}>
+            Login
+          </Button>
         </div>
       </div>
     </div>

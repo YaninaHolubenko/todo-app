@@ -29,6 +29,42 @@
   flex-wrap: wrap;
 }
 
+/* unify Add New button style with chip buttons */
+.list-header .button-container button {
+  appearance: none;
+  min-width: 96px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.55);
+  background: rgba(255,255,255,.60);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform .06s ease,
+    background-color .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    box-shadow .15s ease;
+}
+
+.list-header .button-container button:hover {
+  background: rgba(255,255,255,.75);
+}
+
+.list-header .button-container button:active {
+  transform: translateY(1px);
+}
+
+.list-header .button-container button:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px rgba(201,163,123,.18);
+}
+
 @media (max-width: 915px){
   .list-header{
     flex-direction: column;

@@ -15,13 +15,10 @@ const jwt = require('jsonwebtoken')
 
 // > validation helpers
 const {
-  MAX_TITLE,
   normalizeEmail,
   strongPassword,
-  sanitizeTitle,
-  numberInRange,
-  intInRange,
-  parseDateISO,
+  parseBoolean,
+  validateTodoPayload,
 } = require('./validation')
 
 /** security & parsers */
@@ -82,7 +79,10 @@ app.get('/todos/:userEmail', auth, async (req, res) => {
     return res.status(403).json({ detail: 'Forbidden' })
   }
   try {
-    const todos = await pool.query('SELECT * FROM todos WHERE user_email = $1', [userEmail])
+    const todos = await pool.query(
+      'SELECT * FROM todos WHERE user_email = $1 ORDER BY date DESC',
+      [userEmail]
+    )
     res.json(todos.rows)
   } catch (err) {
     console.error(err)
@@ -92,28 +92,21 @@ app.get('/todos/:userEmail', auth, async (req, res) => {
 
 // create a new todo (forces user_email from the token)
 app.post('/todos', auth, async (req, res) => {
-  const { title, progress, date, completed, priority } = req.body
-
-  // sanitize & validate
-  const t = sanitizeTitle(title)
-  if (!t) return res.status(400).json({ detail: `Invalid title (1–${MAX_TITLE} chars)` })
-
-  const progNum = numberInRange(progress, 0, 100)
-  if (progNum === null) {
-    return res.status(400).json({ detail: 'Invalid progress' })
-  }
+  const v = validateTodoPayload(req.body)
+  if (!v.ok) return res.status(400).json({ detail: v.detail })
 
   const id = uuidv4()
-  const isoDate = parseDateISO(date) || new Date().toISOString()
-  const completedVal = typeof completed === 'boolean' ? completed : false
-  const prio = intInRange(priority, 1, 3)
-  const priorityVal = prio === null ? 2 : prio
   const user_email = req.user.email
+  const title = v.data.title
+  const progress = v.data.progress
+  const priority = v.data.priority
+  const isoDate = v.data.date || new Date().toISOString()
+  const completedVal = parseBoolean(v.data.completed, false)
 
   try {
     await pool.query(
       'INSERT INTO todos(id, user_email, title, progress, date, completed, priority) VALUES($1, $2, $3, $4, $5, $6, $7)',
-      [id, user_email, t, progNum, isoDate, completedVal, priorityVal]
+      [id, user_email, title, progress, isoDate, completedVal, priority]
     )
     res.status(201).json({ id })
   } catch (err) {
@@ -125,7 +118,6 @@ app.post('/todos', auth, async (req, res) => {
 // edit a todo (only owner can edit; partial update)
 app.put('/todos/:id', auth, async (req, res) => {
   const { id } = req.params
-  const { title, progress, date, completed, priority } = req.body
 
   try {
     const owner = await pool.query('SELECT user_email FROM todos WHERE id = $1', [id])
@@ -136,39 +128,17 @@ app.put('/todos/:id', auth, async (req, res) => {
     return res.status(500).json({ detail: 'Server error' })
   }
 
-  // partial, but validate when fields are present
-  let t = null
-  if (title !== undefined) {
-    t = sanitizeTitle(title)
-    if (!t) return res.status(400).json({ detail: `Invalid title (1–${MAX_TITLE} chars)` })
-  }
+  // validate partial update via aggregator
+  const v = validateTodoPayload(req.body, { partial: true })
+  if (!v.ok) return res.status(400).json({ detail: v.detail })
 
-  let progNum = null
-  if (progress !== undefined) {
-    const n = numberInRange(progress, 0, 100)
-    if (n === null) return res.status(400).json({ detail: 'Invalid progress' })
-    progNum = n
-  }
-
-  let isoDate = null
-  if (date !== undefined) {
-    const d = parseDateISO(date)
-    if (!d) return res.status(400).json({ detail: 'Invalid date' })
-    isoDate = d
-  }
-
-  let completedVal = null
-  if (completed !== undefined) {
-    if (typeof completed !== 'boolean') return res.status(400).json({ detail: 'Invalid completed' })
-    completedVal = completed
-  }
-
-  let priorityVal = null
-  if (priority !== undefined) {
-    const p = intInRange(priority, 1, 3)
-    if (p === null) return res.status(400).json({ detail: 'Invalid priority' })
-    priorityVal = p
-  }
+  // map validated fields to current COALESCE pattern
+  const t = v.data.title ?? null
+  const progNum = v.data.progress ?? null
+  const isoDate = v.data.date ?? null
+  const completedVal =
+    v.data.completed !== undefined ? parseBoolean(v.data.completed, false) : null
+  const priorityVal = v.data.priority ?? null
 
   try {
     const result = await pool.query(

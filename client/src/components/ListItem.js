@@ -1,9 +1,9 @@
-// client/src/components/ListItem.js
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import TickIcon from './TickIcon'
 import Modal from './Modal'
 import ProgressBar from './ProgressBar'
+import Button from './ui/Button'
 import './ListItem.css'
 
 const formatDateTime = (value) => {
@@ -120,12 +120,26 @@ const ListItem = ({ task, getData }) => {
         </div>
 
         <div className="button-container">
-          <button className="edit" onClick={() => setShowModal(true)} disabled={isDeleting}>
+          <Button
+            className="edit"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowModal(true)}
+            disabled={isDeleting}
+          >
             {isDeleting ? '...' : 'EDIT'}
-          </button>
-          <button className="delete" onClick={deleteItem} disabled={isDeleting}>
+          </Button>
+
+          <Button
+            className="delete"
+            variant="danger"
+            size="sm"
+            onClick={deleteItem}
+            disabled={isDeleting}
+            loading={isDeleting}
+          >
             {isDeleting ? 'DELETING…' : 'DELETE'}
-          </button>
+          </Button>
         </div>
       </div>
 

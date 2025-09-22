@@ -122,6 +122,58 @@
   min-width: 220px;
 }
 
+/* === Action buttons: match Filters.css chip style === */
+.button-container{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  /* same vars as .chipbar */
+  --chip-min-w: 96px;
+  --chip-h: 36px;
+}
+
+.button-container .edit,
+.button-container .delete{
+  appearance: none;
+  min-width: var(--chip-min-w);
+  height: var(--chip-h);
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.55);
+  background: rgba(255,255,255,.60);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform .06s ease,
+    background-color .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    box-shadow .15s ease;
+}
+
+.button-container .edit:hover,
+.button-container .delete:hover{ background: rgba(255,255,255,.75); }
+.button-container .edit:active,
+.button-container .delete:active{ transform: translateY(1px); }
+
+.button-container .edit:focus-visible,
+.button-container .delete:focus-visible{
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px rgba(201,163,123,.18);
+}
+
+.button-container .edit:disabled,
+.button-container .delete:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* minor */
 .form-error{ margin-top: 8px; }
 
@@ -130,6 +182,16 @@
   .progress-wrap{
     flex: 1 1 100%;
     min-width: 100%;
+  }
+  /* keep chip sizing consistent with Filters.css */
+  .button-container{
+    gap: 6px;
+    --chip-min-w: 88px;
+    --chip-h: 34px;
+  }
+  .button-container .edit,
+  .button-container .delete{
+    padding: 0 14px;
   }
 }
 

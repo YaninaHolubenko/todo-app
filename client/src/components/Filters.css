@@ -58,14 +58,14 @@
   border-color: rgba(111,88,72,.58);
 }
 
-/* disabled (на будущее) */
+/* disabled */
 .chipbar button:disabled{
   opacity: .55;
   cursor: not-allowed;
   transform: none;
 }
 
-/* empty state hint under list (используется в App) */
+/* empty state hint under list  */
 .empty-hint{ margin-top: 12px; }
 
 /* Responsive tweaks */

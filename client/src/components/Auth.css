@@ -1,3 +1,4 @@
+/* client\src\components\Auth.css */
 /* Auth container */
 .auth-container{
   display:flex;
@@ -44,25 +45,40 @@
 
 /* password eye */
 .pwd-wrap{ position: relative; }
-.pwd-toggle{
+
+/* Strong, local styles for the eye toggle to avoid any global button styles bleeding in */
+.pwd-wrap > .pwd-toggle{
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
   display: grid;
   place-items: center;
-  width: 28px; height: 28px;
+
+  width: 28px;
+  height: 28px;
+  padding: 0;
+
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,.55);
   background: rgba(255,255,255,.7);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
+
   cursor: pointer;
   transition: background-color .15s ease, transform .06s ease;
+
+  /* hard resets to beat any global button styles */
+  box-shadow: none;
+  text-decoration: none;
+  line-height: 1;
+  appearance: none;
+  -webkit-appearance: none;
 }
-.pwd-toggle:hover{ background: rgba(255,255,255,.85); }
-.pwd-toggle:active{ transform: translateY(-50%) scale(.97); }
-.pwd-toggle svg{ width: 16px; height: 16px; opacity: .85; }
+
+.pwd-wrap > .pwd-toggle:hover{ background: rgba(255,255,255,.85); }
+.pwd-wrap > .pwd-toggle:active{ transform: translateY(-50%) scale(.97); }
+.pwd-wrap > .pwd-toggle svg{ width: 16px; height: 16px; opacity: .85; }
 
 /* segmented control below submit */
 .auth-options{
@@ -71,6 +87,7 @@
   gap: 8px;
   margin-top: 6px;
 }
+
 .auth-options button{
   height: 40px;
   border-radius: 12px;
@@ -82,7 +99,7 @@
 .auth-options button:hover{ background: rgba(255,255,255,.75); }
 .auth-options button:active{ transform: translateY(1px); }
 
-/* Responsive auth width tweak (same logic, но локально для Auth) */
+/* Responsive auth width tweak */
 @media (max-width: 760px){
   .auth-container .auth-container-box{
     box-sizing: border-box;

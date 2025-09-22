@@ -1,15 +1,16 @@
-// client/src/App.js
 import ListHeader from './components/ListHeader'
 import ListItem from './components/ListItem'
 import Profile from './components/Profile'
 import Auth from './components/Auth'
 import Topbar from './components/Topbar'
 import { AnimatePresence, motion } from 'framer-motion'
+import Button from './components/ui/Button'
 import './App.css'
 import './components/Filters.css'
 import { useEffect, useMemo, useState } from 'react'
 
 const TOPBAR_H = 72
+const MotionButton = motion(Button)
 
 const App = () => {
   // session state
@@ -171,15 +172,63 @@ const App = () => {
             {/* chip toolbars: filters & sorting */}
             <div className="chiprow">
               <motion.div className="chipbar" role="tablist" aria-label="Filter tasks" layout>
-                <motion.button whileTap={{ scale: 0.98 }} className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</motion.button>
-                <motion.button whileTap={{ scale: 0.98 }} className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>Active</motion.button>
-                <motion.button whileTap={{ scale: 0.98 }} className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>Completed</motion.button>
+                <MotionButton
+                  whileTap={{ scale: 0.98 }}
+                  variant="ghost"
+                  size="sm"
+                  className={filter === 'all' ? 'active' : ''}
+                  onClick={() => setFilter('all')}
+                >
+                  All
+                </MotionButton>
+                <MotionButton
+                  whileTap={{ scale: 0.98 }}
+                  variant="ghost"
+                  size="sm"
+                  className={filter === 'active' ? 'active' : ''}
+                  onClick={() => setFilter('active')}
+                >
+                  Active
+                </MotionButton>
+                <MotionButton
+                  whileTap={{ scale: 0.98 }}
+                  variant="ghost"
+                  size="sm"
+                  className={filter === 'completed' ? 'active' : ''}
+                  onClick={() => setFilter('completed')}
+                >
+                  Completed
+                </MotionButton>
               </motion.div>
 
               <motion.div className="chipbar" role="tablist" aria-label="Sort tasks" layout>
-                <motion.button whileTap={{ scale: 0.98 }} className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>Date</motion.button>
-                <motion.button whileTap={{ scale: 0.98 }} className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>Priority</motion.button>
-                <motion.button whileTap={{ scale: 0.98 }} className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>Progress</motion.button>
+                <MotionButton
+                  whileTap={{ scale: 0.98 }}
+                  variant="ghost"
+                  size="sm"
+                  className={sortKey === 'date' ? 'active' : ''}
+                  onClick={() => setSortKey('date')}
+                >
+                  Date
+                </MotionButton>
+                <MotionButton
+                  whileTap={{ scale: 0.98 }}
+                  variant="ghost"
+                  size="sm"
+                  className={sortKey === 'priority' ? 'active' : ''}
+                  onClick={() => setSortKey('priority')}
+                >
+                  Priority
+                </MotionButton>
+                <MotionButton
+                  whileTap={{ scale: 0.98 }}
+                  variant="ghost"
+                  size="sm"
+                  className={sortKey === 'progress' ? 'active' : ''}
+                  onClick={() => setSortKey('progress')}
+                >
+                  Progress
+                </MotionButton>
               </motion.div>
             </div>
 

@@ -1,5 +1,6 @@
 // client/src/components/Profile.js
 import { useState } from 'react'
+import Button from './ui/Button'
 import './Profile.css'
 
 const EyeIcon = ({ open = false }) =>
@@ -145,15 +146,18 @@ const Profile = ({ onUpdated }) => {
               onChange={handleChange}
               disabled={loading}
             />
-            <button
+            <Button
               type="button"
               className="pwd-toggle"
+              variant="ghost"
               aria-label={showCurrent ? 'Hide password' : 'Show password'}
               aria-pressed={showCurrent}
               onClick={() => setShowCurrent((v) => !v)}
+              disabled={loading}
+              title={showCurrent ? 'Hide password' : 'Show password'}
             >
               <EyeIcon open={showCurrent} />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -185,15 +189,18 @@ const Profile = ({ onUpdated }) => {
               disabled={loading}
               minLength={6}
             />
-            <button
+            <Button
               type="button"
               className="pwd-toggle"
+              variant="ghost"
               aria-label={showNew ? 'Hide password' : 'Show password'}
               aria-pressed={showNew}
               onClick={() => setShowNew((v) => !v)}
+              disabled={loading}
+              title={showNew ? 'Hide password' : 'Show password'}
             >
               <EyeIcon open={showNew} />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -211,15 +218,18 @@ const Profile = ({ onUpdated }) => {
               disabled={loading}
               minLength={6}
             />
-            <button
+            <Button
               type="button"
               className="pwd-toggle"
+              variant="ghost"
               aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
               aria-pressed={showConfirm}
               onClick={() => setShowConfirm((v) => !v)}
+              disabled={loading}
+              title={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
             >
               <EyeIcon open={showConfirm} />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -227,17 +237,19 @@ const Profile = ({ onUpdated }) => {
         {success && <p className="form-success" role="status">{success}</p>}
 
         <div className="button-container profile__actions">
-          <button className="create" type="submit" disabled={loading}>
-            {loading ? 'Saving…' : 'Save changes'}
-          </button>
-          <button
+          <Button className="create" type="submit" variant="primary" disabled={loading} loading={loading}>
+            Save changes
+          </Button>
+          <Button
             type="button"
             className="delete"
+            variant="danger"
             onClick={handleDelete}
             disabled={deleting || loading}
+            loading={deleting}
           >
-            {deleting ? 'Deleting…' : 'Delete account'}
-          </button>
+            Delete account
+          </Button>
         </div>
       </form>
     </section>
@@ -245,3 +257,4 @@ const Profile = ({ onUpdated }) => {
 }
 
 export default Profile
+

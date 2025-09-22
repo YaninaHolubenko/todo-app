@@ -1,3 +1,4 @@
+import Button from './ui/Button'
 import './Topbar.css'
 
 const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
@@ -10,23 +11,25 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
       </div>
 
       <div className="topbar__actions">
-        <button
+        <Button
           type="button"
           className="topbar__btn topbar__toggle"
+          variant="ghost"
           onClick={onToggle}
           aria-pressed={isProfile}
           title={isProfile ? 'Go to tasks' : 'Open profile'}
         >
           {isProfile ? 'Tasks' : 'Profile'}
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
           className="topbar__btn topbar__signout"
+          variant="danger"
           onClick={onSignOut}
         >
           SIGN OUT
-        </button>
+        </Button>
       </div>
     </header>
   )

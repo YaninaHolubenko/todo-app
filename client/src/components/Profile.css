@@ -26,6 +26,39 @@
   margin-top: 10px;
 }
 
+/* Eye toggle (local, not global) */
+.pwd-wrap{ position: relative; }
+.pwd-wrap > .pwd-toggle{
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+
+  width: 28px;
+  height: 28px;
+  padding: 0;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.55);
+  background: rgba(255,255,255,.7);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+
+  cursor: pointer;
+  transition: background-color .15s ease, transform .06s ease;
+
+  box-shadow: none;
+  text-decoration: none;
+  line-height: 1;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.pwd-wrap > .pwd-toggle:hover{ background: rgba(255,255,255,.85); }
+.pwd-wrap > .pwd-toggle:active{ transform: translateY(-50%) scale(.97); }
+.pwd-wrap > .pwd-toggle svg{ width: 16px; height: 16px; opacity: .85; }
+
 /* Actions */
 .profile__actions{
   display: flex;
