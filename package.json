@@ -4,9 +4,11 @@
   "description": "",
   "scripts": {
     "build": "if-env TYPE=server && (cd server && npm install) || (cd client && npm install)",
-    "test": "jest --runInBand",
+    "build:client": "cd client && npm install && npm run build",
     "server": "node ./server/server.js",
-    "client": "cd client && npm start"
+    "client": "cd client && npm start",
+    "start": "node ./server/server.js",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "if-env": "^1.0.4"
