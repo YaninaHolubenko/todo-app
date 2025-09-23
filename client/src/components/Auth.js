@@ -1,4 +1,4 @@
-//client\src\components\Auth.js
+// client/src/components/Auth.js
 import { useCallback, useMemo, useState } from 'react'
 import Button from './ui/Button'
 import './Auth.css'
@@ -75,7 +75,6 @@ const Auth = () => {
         body: JSON.stringify({ email: emailValue, password: passwordValue }),
       })
 
-      // backend returns 204 on success (no JSON). Attempt to parse JSON only if present.
       let data = null
       const text = await response.text()
       if (text) {
@@ -96,6 +95,9 @@ const Auth = () => {
           if (cred) await navigator.credentials.store(cred)
         }
       } catch { /* ignore */ }
+
+      // mark that we have an authenticated session to avoid hitting /me on the login screen
+      try { localStorage.setItem('hasAuth', '1') } catch {}
 
       window.location.reload()
     } catch (err) {
