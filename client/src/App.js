@@ -10,7 +10,6 @@ import './App.css'
 import './components/Filters.css'
 import { useEffect, useMemo, useState } from 'react'
 
-const TOPBAR_H = 72
 const MotionButton = motion(Button)
 
 const App = () => {
@@ -163,7 +162,8 @@ const App = () => {
         onSignOut={signOut}
       />
 
-      <div style={{ height: TOPBAR_H }} aria-hidden />
+      {/* ВАЖНО: динамический спейсер, который увеличивается при открытии меню */}
+      <div className="top-spacer" aria-hidden />
 
       <div className="app">
         {view === 'profile' ? (
