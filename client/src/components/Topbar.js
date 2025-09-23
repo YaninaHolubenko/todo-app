@@ -1,3 +1,4 @@
+// client/src/components/Topbar.js
 import { useEffect, useRef, useState } from 'react';
 import Button from './ui/Button';
 import './Topbar.css';
@@ -5,7 +6,10 @@ import './Topbar.css';
 const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
   const isProfile = view === 'profile';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const menuRef = useRef(null);
+  const burgerRef = useRef(null);
+  const firstItemRef = useRef(null);
 
   const handleToggleMenu = () => setIsMenuOpen(v => !v);
 
@@ -19,25 +23,40 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
     setIsMenuOpen(false);
   };
 
-  // When menu opens, push content down by the menu height
+  // Push content down by the menu height when open
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
 
     if (isMenuOpen) {
-      // measure menu height
       const h = (menuRef.current?.offsetHeight || 0) + 8; // small gap
       root.style.setProperty('--topbar-menu-push', `${h}px`);
       body.classList.add('topbar-menu-open');
+
+      // make sure menu is focusable and move focus inside
+      menuRef.current?.removeAttribute('inert');
+      firstItemRef.current?.focus();
     } else {
       root.style.setProperty('--topbar-menu-push', '0px');
       body.classList.remove('topbar-menu-open');
+      menuRef.current?.setAttribute('inert', '');
+      burgerRef.current?.focus();
     }
 
     return () => {
       root.style.setProperty('--topbar-menu-push', '0px');
       body.classList.remove('topbar-menu-open');
+      menuRef.current?.setAttribute('inert', '');
     };
+  }, [isMenuOpen]);
+
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && isMenuOpen) setIsMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [isMenuOpen]);
 
   return (
@@ -75,6 +94,7 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
 
         {/* Burger / Close on mobile (right) */}
         <button
+          ref={burgerRef}
           className={`topbar__burger ${isMenuOpen ? 'is-open' : ''}`}
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMenuOpen}
@@ -93,12 +113,13 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
       <nav
         id="topbar-menu"
         className={`topbar__menu ${isMenuOpen ? 'is-open' : ''}`}
-        aria-hidden={!isMenuOpen}
+        hidden={!isMenuOpen}             
         ref={menuRef}
       >
         <ul className="topbar__menu-list" role="menu">
           <li role="none">
             <button
+              ref={firstItemRef}
               type="button"
               role="menuitem"
               className="topbar__menu-item"
