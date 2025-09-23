@@ -138,7 +138,7 @@ const App = () => {
   if (checkingSession) {
     return (
       <>
-        <div style={{ height: TOPBAR_H }} aria-hidden />
+        <div className="top-spacer" aria-hidden />
         <div className="app">
           <p>Loading…</p>
         </div>
