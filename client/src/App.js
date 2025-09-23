@@ -1,3 +1,4 @@
+// client/src/App.js
 import ListHeader from './components/ListHeader'
 import ListItem from './components/ListItem'
 import Profile from './components/Profile'
@@ -27,8 +28,20 @@ const App = () => {
   const [sortKey, setSortKey] = useState('date') // date | priority | progress
   const [view, setView] = useState('tasks') // 'tasks' | 'profile'
 
+  // helper: read hasAuth flag
+  const hasAuthFlag = () => {
+    try { return localStorage.getItem('hasAuth') === '1' } catch { return false }
+  }
+
   useEffect(() => {
     const loadSession = async () => {
+      // do not hit /me if we know there is no auth
+      if (!hasAuthFlag()) {
+        setUserEmail(null)
+        setCheckingSession(false)
+        return
+      }
+
       try {
         const res = await fetch(`${process.env.REACT_APP_SERVERURL}/me`, {
           credentials: 'include',
@@ -39,8 +52,7 @@ const App = () => {
         } else {
           setUserEmail(null)
         }
-      } catch (err) {
-        console.error(err)
+      } catch {
         setUserEmail(null)
       } finally {
         setCheckingSession(false)
@@ -101,6 +113,7 @@ const App = () => {
     } catch (err) {
       console.error(err)
     } finally {
+      try { localStorage.removeItem('hasAuth') } catch {}
       clearLegacyCookies()
       window.location.reload()
     }
