@@ -58,8 +58,8 @@
 /* Normalize default margins so label–control spacing is consistent */
 .modal label,
 .modal .field-label{ font-size:14px; color: rgba(0,0,0,.55); margin:0; }
-.modal input{ margin:0; }                 /* << fixes extra gaps from global styles */
-.modal .range{ margin:0; }                 /* ensure slider follows the same rhythm */
+.modal input{ margin:0; }                 
+.modal .range{ margin:0; }                 
 
 /* range */
 .range{

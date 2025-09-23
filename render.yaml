@@ -1,0 +1,31 @@
+# render.yaml
+services:
+  - type: web
+    name: todo-server
+    env: node
+    rootDir: server
+    plan: free
+    region: frankfurt
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: CLIENT_ORIGIN
+        # replace with your deployed client URL after static site is live
+        value: https://todo-client.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        # put your Neon (or other free Postgres) connection string here
+        # example: postgres://user:pass@ep-xxxx.eu-central-1.aws.neon.tech/db?sslmode=require
+        sync: false
+
+  - type: static
+    name: todo-client
+    rootDir: client
+    plan: free
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: "build"

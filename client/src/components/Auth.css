@@ -1,14 +1,20 @@
-/* client\src\components\Auth.css */
+/* client/src/components/Auth.css */
 /* Auth container */
 .auth-container{
-  display:flex;
-  justify-content:center;
-  margin:6px;
-  width:100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+
+  display: grid;
+  place-items: center;
+
+  padding: 24px;
+  margin: 0;
+  width: 100%;
 }
 
 .auth-container-box{
-  width:100%;
+  width: 100%;
   max-width: 640px;
   padding: 80px;
   background: var(--glass);
@@ -46,7 +52,6 @@
 /* password eye */
 .pwd-wrap{ position: relative; }
 
-/* Strong, local styles for the eye toggle to avoid any global button styles bleeding in */
 .pwd-wrap > .pwd-toggle{
   position: absolute;
   right: 10px;
@@ -68,7 +73,6 @@
   cursor: pointer;
   transition: background-color .15s ease, transform .06s ease;
 
-  /* hard resets to beat any global button styles */
   box-shadow: none;
   text-decoration: none;
   line-height: 1;
@@ -99,11 +103,32 @@
 .auth-options button:hover{ background: rgba(255,255,255,.75); }
 .auth-options button:active{ transform: translateY(1px); }
 
-/* Responsive auth width tweak */
-@media (max-width: 760px){
-  .auth-container .auth-container-box{
+/* responsive overrides to guarantee fit on phones */
+@media (max-width: 768px){
+  .auth-container { padding: 16px; }
+  .auth-container > .auth-container-box{
     box-sizing: border-box;
-    width: min(92vw, 760px);
-    max-width: none;
+    width: 100%;
+    max-width: 420px;
+    padding: 28px;
+    margin-inline: auto;
   }
+  .auth-title{ font-size: 22px; }
+  .auth-container-box form{ gap: 12px; }
+  .auth-options button{ height: 38px; }
+  .pwd-wrap > .pwd-toggle{ right: 8px; width: 26px; height: 26px; }
+}
+
+@media (max-width: 420px){
+  .auth-container { padding: 12px; }
+  .auth-container > .auth-container-box{
+    max-width: 360px;
+    padding: 20px;
+  }
+  .auth-title{ font-size: 20px; }
+  .auth-container-box form{ gap: 10px; }
+  .auth-container-box .create{ height: 42px; }
+  .auth-options{ gap: 6px; }
+  .auth-options button{ height: 36px; }
+  .pwd-wrap > .pwd-toggle{ width: 24px; height: 24px; right: 6px; }
 }

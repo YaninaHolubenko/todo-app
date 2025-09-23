@@ -52,6 +52,11 @@
   border-color: rgba(111,88,72,.58);
 }
 
+/* Reduce top gap under fixed topbar on mobile */
+@media (max-width: 768px){
+  .app { margin-top: 12px; }
+}
+
 /* Responsive utility */
 @media (max-width: 560px){
   .app { padding: 14px; }
