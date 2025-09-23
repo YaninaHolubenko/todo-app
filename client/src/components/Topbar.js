@@ -18,7 +18,6 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
     setIsMenuOpen(false);
   };
 
-  // close menu on window resize or Escape
   useEffect(() => {
     const onResize = () => setIsMenuOpen(false);
     const onKey = (e) => e.key === 'Escape' && setIsMenuOpen(false);
@@ -31,54 +30,57 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
   }, []);
 
   return (
-    <header className="topbar" role="banner">
-      <div className="topbar__left">
-        <div className="topbar__chip" title={userEmail || ''}>
-          Welcome back <strong className="topbar__email">{userEmail}</strong>
-        </div>
-      </div>
-
-      <div className="topbar__right">
-        {/* desktop */}
-        <div className="topbar__actions">
-          <Button
-            type="button"
-            className="topbar__btn topbar__toggle"
-            variant="ghost"
-            onClick={handleNavToggle}
-            aria-pressed={isProfile}
-            title={isProfile ? 'Go to tasks' : 'Open profile'}
-          >
-            {isProfile ? 'Tasks' : 'Profile'}
-          </Button>
-
-          <Button
-            type="button"
-            className="topbar__btn topbar__signout"
-            variant="danger"
-            onClick={handleSignOut}
-          >
-            SIGN OUT
-          </Button>
+    <>
+      <header className="topbar" role="banner">
+        <div className="topbar__left">
+          <div className="topbar__chip" title={userEmail || ''}>
+            <span className="topbar__hello">Welcome,</span>
+            <strong className="topbar__email">{userEmail}</strong>
+          </div>
         </div>
 
-        {/* mobile burger on the right */}
-        <button
-          type="button"
-          className={`topbar__burger ${isMenuOpen ? 'topbar__burger--open' : ''}`}
-          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={isMenuOpen}
-          aria-controls="topbar-menu"
-          aria-haspopup="menu"
-          onClick={handleToggleMenu}
-        >
-          <span className="topbar__burger-bar" />
-          <span className="topbar__burger-bar" />
-          <span className="topbar__burger-bar" />
-        </button>
-      </div>
+        <div className="topbar__right">
+          {/* desktop */}
+          <div className="topbar__actions">
+            <Button
+              type="button"
+              className="topbar__btn topbar__toggle"
+              variant="ghost"
+              onClick={handleNavToggle}
+              aria-pressed={isProfile}
+              title={isProfile ? 'Go to tasks' : 'Open profile'}
+            >
+              {isProfile ? 'Tasks' : 'Profile'}
+            </Button>
 
-      {/* mobile dropdown (aligned to right) */}
+            <Button
+              type="button"
+              className="topbar__btn topbar__signout"
+              variant="danger"
+              onClick={handleSignOut}
+            >
+              SIGN OUT
+            </Button>
+          </div>
+
+          {/* mobile burger on the right */}
+          <button
+            type="button"
+            className={`topbar__burger ${isMenuOpen ? 'topbar__burger--open' : ''}`}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMenuOpen}
+            aria-controls="topbar-menu"
+            aria-haspopup="menu"
+            onClick={handleToggleMenu}
+          >
+            <span className="topbar__burger-bar" />
+            <span className="topbar__burger-bar" />
+            <span className="topbar__burger-bar" />
+          </button>
+        </div>
+      </header>
+
+      {/* full-width mobile dropdown mounted right under the topbar */}
       <nav
         id="topbar-menu"
         className={`topbar__menu ${isMenuOpen ? 'is-open' : ''}`}
@@ -108,7 +110,7 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
           </li>
         </ul>
       </nav>
-    </header>
+    </>
   );
 };
 
