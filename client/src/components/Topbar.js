@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from './ui/Button';
 import './Topbar.css';
 
@@ -7,14 +7,28 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleToggleMenu = () => setIsMenuOpen((v) => !v);
+
   const handleNavToggle = () => {
     onToggle?.();
     setIsMenuOpen(false);
   };
+
   const handleSignOut = () => {
     onSignOut?.();
     setIsMenuOpen(false);
   };
+
+  // close menu on window resize or Escape
+  useEffect(() => {
+    const onResize = () => setIsMenuOpen(false);
+    const onKey = (e) => e.key === 'Escape' && setIsMenuOpen(false);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
   return (
     <header className="topbar" role="banner">
@@ -25,7 +39,7 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
       </div>
 
       <div className="topbar__right">
-        {/* Desktop actions */}
+        {/* desktop */}
         <div className="topbar__actions">
           <Button
             type="button"
@@ -48,15 +62,15 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
           </Button>
         </div>
 
-        {/* Burger on the right (mobile) */}
+        {/* mobile burger on the right */}
         <button
-          className="topbar__burger"
-          aria-label="Open menu"
+          type="button"
+          className={`topbar__burger ${isMenuOpen ? 'topbar__burger--open' : ''}`}
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMenuOpen}
           aria-controls="topbar-menu"
           aria-haspopup="menu"
           onClick={handleToggleMenu}
-          type="button"
         >
           <span className="topbar__burger-bar" />
           <span className="topbar__burger-bar" />
@@ -64,7 +78,7 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
         </button>
       </div>
 
-      {/* Mobile dropdown menu (aligns to right) */}
+      {/* mobile dropdown (aligned to right) */}
       <nav
         id="topbar-menu"
         className={`topbar__menu ${isMenuOpen ? 'is-open' : ''}`}
@@ -77,7 +91,6 @@ const Topbar = ({ userEmail, view, onToggle, onSignOut }) => {
               role="menuitem"
               className="topbar__menu-item"
               onClick={handleNavToggle}
-              // убрали aria-pressed, чтобы не было предупреждения
               data-active={isProfile || undefined}
             >
               {isProfile ? 'Tasks' : 'Profile'}
