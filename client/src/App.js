@@ -24,18 +24,17 @@ const App = () => {
 
   // UI state
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState('all') // all | active | completed
-  const [sortKey, setSortKey] = useState('date') // date | priority | progress
+  const [filter, setFilter] = useState('all')
+  const [sortKey, setSortKey] = useState('date')
   const [view, setView] = useState('tasks') // 'tasks' | 'profile'
 
-  // helper: read hasAuth flag
   const hasAuthFlag = () => {
     try { return localStorage.getItem('hasAuth') === '1' } catch { return false }
   }
 
   useEffect(() => {
     const loadSession = async () => {
-      // do not hit /me if we know there is no auth
+      // do not hit /me when we know there is no auth
       if (!hasAuthFlag()) {
         setUserEmail(null)
         setCheckingSession(false)
@@ -46,10 +45,13 @@ const App = () => {
         const res = await fetch(`${process.env.REACT_APP_SERVERURL}/me`, {
           credentials: 'include',
         })
+
         if (res.ok) {
           const json = await res.json()
           setUserEmail(json?.email || null)
         } else {
+          // if server says 401, forget the local flag to avoid future calls
+          try { localStorage.removeItem('hasAuth') } catch {}
           setUserEmail(null)
         }
       } catch {
@@ -61,7 +63,7 @@ const App = () => {
     loadSession()
   }, [])
 
-  // toggle a class on <body> when session changes
+  // stick body padding when topbar is visible
   useEffect(() => {
     const cls = 'with-topbar'
     if (userEmail) document.body.classList.add(cls)
@@ -69,15 +71,14 @@ const App = () => {
     return () => document.body.classList.remove(cls)
   }, [userEmail])
 
-  // fetch tasks for the user
   const getData = async () => {
     if (!userEmail) return
     setLoading(true)
     try {
-      const response = await fetch(`${process.env.REACT_APP_SERVERURL}/todos/${encodeURIComponent(userEmail)}`, {
-        method: 'GET',
-        credentials: 'include',
-      })
+      const response = await fetch(
+        `${process.env.REACT_APP_SERVERURL}/todos/${encodeURIComponent(userEmail)}`,
+        { method: 'GET', credentials: 'include' }
+      )
       if (!response.ok) throw new Error('Failed to load tasks')
       const json = await response.json()
       setTasks(Array.isArray(json) ? json : [])
@@ -89,7 +90,6 @@ const App = () => {
     }
   }
 
-  // load tasks after session resolves
   useEffect(() => {
     if (userEmail && view === 'tasks') getData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -99,9 +99,7 @@ const App = () => {
     try {
       document.cookie = 'Email=; Max-Age=0; path=/'
       document.cookie = 'AuthToken=; Max-Age=0; path=/'
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }
 
   const signOut = async () => {
@@ -119,7 +117,6 @@ const App = () => {
     }
   }
 
-  // search/filter/sort pipeline
   const processedTasks = useMemo(() => {
     let arr = Array.isArray(tasks) ? [...tasks] : []
 
@@ -182,64 +179,33 @@ const App = () => {
               aria-label="Search tasks"
             />
 
-            {/* chip toolbars: filters & sorting */}
             <div className="chiprow">
               <motion.div className="chipbar" role="tablist" aria-label="Filter tasks" layout>
-                <MotionButton
-                  whileTap={{ scale: 0.98 }}
-                  variant="ghost"
-                  size="sm"
-                  className={filter === 'all' ? 'active' : ''}
-                  onClick={() => setFilter('all')}
-                >
+                <MotionButton whileTap={{ scale: 0.98 }} variant="ghost" size="sm"
+                  className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>
                   All
                 </MotionButton>
-                <MotionButton
-                  whileTap={{ scale: 0.98 }}
-                  variant="ghost"
-                  size="sm"
-                  className={filter === 'active' ? 'active' : ''}
-                  onClick={() => setFilter('active')}
-                >
+                <MotionButton whileTap={{ scale: 0.98 }} variant="ghost" size="sm"
+                  className={filter === 'active' ? 'active' : ''} onClick={() => setFilter('active')}>
                   Active
                 </MotionButton>
-                <MotionButton
-                  whileTap={{ scale: 0.98 }}
-                  variant="ghost"
-                  size="sm"
-                  className={filter === 'completed' ? 'active' : ''}
-                  onClick={() => setFilter('completed')}
-                >
+                <MotionButton whileTap={{ scale: 0.98 }} variant="ghost" size="sm"
+                  className={filter === 'completed' ? 'active' : ''} onClick={() => setFilter('completed')}>
                   Completed
                 </MotionButton>
               </motion.div>
 
               <motion.div className="chipbar" role="tablist" aria-label="Sort tasks" layout>
-                <MotionButton
-                  whileTap={{ scale: 0.98 }}
-                  variant="ghost"
-                  size="sm"
-                  className={sortKey === 'date' ? 'active' : ''}
-                  onClick={() => setSortKey('date')}
-                >
+                <MotionButton whileTap={{ scale: 0.98 }} variant="ghost" size="sm"
+                  className={sortKey === 'date' ? 'active' : ''} onClick={() => setSortKey('date')}>
                   Date
                 </MotionButton>
-                <MotionButton
-                  whileTap={{ scale: 0.98 }}
-                  variant="ghost"
-                  size="sm"
-                  className={sortKey === 'priority' ? 'active' : ''}
-                  onClick={() => setSortKey('priority')}
-                >
+                <MotionButton whileTap={{ scale: 0.98 }} variant="ghost" size="sm"
+                  className={sortKey === 'priority' ? 'active' : ''} onClick={() => setSortKey('priority')}>
                   Priority
                 </MotionButton>
-                <MotionButton
-                  whileTap={{ scale: 0.98 }}
-                  variant="ghost"
-                  size="sm"
-                  className={sortKey === 'progress' ? 'active' : ''}
-                  onClick={() => setSortKey('progress')}
-                >
+                <MotionButton whileTap={{ scale: 0.98 }} variant="ghost" size="sm"
+                  className={sortKey === 'progress' ? 'active' : ''} onClick={() => setSortKey('progress')}>
                   Progress
                 </MotionButton>
               </motion.div>
