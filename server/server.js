@@ -2,6 +2,7 @@
 require('dotenv').config();
 
 const path = require('path');
+const fs = require('fs');
 const PORT = process.env.PORT ?? 8000;
 const express = require('express');
 const cors = require('cors');
@@ -32,15 +33,17 @@ app.use('/', require('./routes/auth'));
 app.use('/users', require('./routes/users'));
 app.use('/todos', require('./routes/todos'));
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/health', (_req, res) => res.json({ ok: true }));
 
-// Serve React build in production
+// Serve React build only if it exists (monorepo single-service mode)
 if (process.env.NODE_ENV === 'production') {
   const clientBuild = path.resolve(__dirname, '../client/build');
-  app.use(express.static(clientBuild));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientBuild, 'index.html'));
-  });
+  const indexHtml = path.join(clientBuild, 'index.html');
+
+  if (fs.existsSync(indexHtml)) {
+    app.use(express.static(clientBuild));
+    app.get('*', (_req, res) => res.sendFile(indexHtml));
+  }
 }
 
 // error handler (keep last)
