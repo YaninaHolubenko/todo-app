@@ -4,9 +4,18 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const { setAuthCookie } = require('../middleware/auth');
 
-// minimal email/password checks to avoid extra deps for now
+// simple validators
 const isEmail = (v) => typeof v === 'string' && /\S+@\S+\.\S+/.test(v);
 const strongPassword = (v) => typeof v === 'string' && v.length >= 6;
+
+// cookie options used for clearing (must match how cookies are set)
+const isProd = process.env.NODE_ENV === 'production';
+const cookieClearOpts = {
+  httpOnly: true,
+  path: '/',
+  sameSite: isProd ? 'None' : 'Lax',
+  secure: isProd,
+};
 
 const signup = async (req, res) => {
   const email = (req.body?.email || '').toLowerCase().trim();
@@ -62,8 +71,10 @@ const me = async (req, res) => {
   res.json({ email: req.user.email });
 };
 
-const logout = async (req, res) => {
-  res.clearCookie('token', { path: '/' });
+const logout = async (_req, res) => {
+  // clear the current cookie and possible legacy names with matching attributes
+  res.clearCookie('token', { ...cookieClearOpts, maxAge: 0 });
+  res.clearCookie('AuthToken', { ...cookieClearOpts, maxAge: 0 });
   res.status(204).end();
 };
 
