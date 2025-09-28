@@ -90,7 +90,7 @@ Vercel or Netlify (frontend)
 ---
 ## 📸 Screenshots
 ![alt text](screenshots/image-1.png)
-![alt text](screenshots/image-1.pngimage-2.png)
+![alt text](screenshots/image-2.png)
 ![alt text](screenshots/image-3.png)
 ![alt text](screenshots/image-4.png)
 ![alt text](screenshots/image-5.png)
